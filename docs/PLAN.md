@@ -180,7 +180,7 @@ release manifest in `work-hub`.
 | M08 | Meetings | C | M | M05, M06 | [M08](plan/M08-meetings.md) |
 
 Sizes are relative effort: S, M, L, XL. A milestone exists, with the same title, in every
-repository that has issues for it.
+repository that has issues for it, and in this one, where every module has its epic.
 
 ## Tracks (for parallel work)
 
@@ -203,6 +203,8 @@ repository that has issues for it.
 - The spike M06-01 (which accounts can connect) runs during Phase 1, so Phase 2 is not
   planned blind.
 - Phase 1 is complete on its own: later phases can slip without breaking it.
+- Dates live in the plan files: each has a week-by-week schedule, the board's Roadmap
+  draws it, and a milestone is due on the last day of its module.
 
 ## Later modules
 
@@ -283,14 +285,24 @@ Before Phase 2:
   not done while one is missing.
 - A change of the contract is its own pull request in the backend, merged before the
   client change that uses it.
-- Labels: `type:*` (feature, bug, chore, ci, docs, security, test, adr, spike) and
-  `area:*` (one per milestone), the same in every repository.
-- One public project board lists the issues of every repository: the sync script adds
-  them; the built-in Status, Repository and Milestone fields carry the state, the part
-  and the module, and saved views filter by repository, track and phase.
-- Issues in each plan file use the form `- <ID> [type] Title -- Done when: ...`, grouped
-  under a `### <repository>` heading. The ID never changes; the sync script uses it to
-  create or update the issue, and moving a line to another heading moves the issue.
+- Labels, the same in every repository: every issue has one `type:*` (feature, bug,
+  chore, ci, docs, security, test, adr, spike), one `area:*` (its milestone), one
+  `prio:*` (p1 blocks other work or a safety property, p2 is part of the release, p3 can
+  ship after the release) and one `phase:*`. `blocked`, `needs:decision`, `tech-debt`
+  and, on a pull request, `breaking-change` are set by hand.
+- One public project board spans every repository. Each module has an epic in this
+  repository, and its issues, wherever they live, are sub-issues of that epic. Every
+  card has an assignee, a milestone, a priority, a phase, a track and start and target
+  dates. [BOARD.md](BOARD.md) explains the fields, the views and the rules.
+- Issues in each plan file use the form `- <ID> [type priority] Title -- Done when: ...`,
+  grouped under a `### <repository>` heading. The ID never changes; the sync script uses
+  it to create or update the issue, and moving a line to another heading moves the issue.
+- Each plan file has a `## Schedule` table that gives every issue its week, Monday to
+  Sunday. Dates change there; the sync script then moves the cards and the due dates of
+  the milestones.
+- A pull request has an assignee, the type and area labels and the milestone of its
+  issue, and names the issue in its body: `Closes #N` when it finishes it, `Refs #N`
+  when it does not. An issue is closed only when its "Done when" holds.
 - Fast gates block the merge; slow gates (DAST, load tests) run nightly and block the
   promotion to a release.
 - Parallel work: each repository has its own checkout; shared files (the Compose files,

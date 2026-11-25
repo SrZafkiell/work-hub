@@ -59,8 +59,10 @@ shared workspaces. See [later modules](docs/PLAN.md#later-modules).
 
 ## Engineering standards
 
-- Issues, milestones and a public project board; every change through a pull request,
-  in every repository.
+- The plan is kept as files and synced to GitHub: every issue has an epic, an owner, a
+  priority and a planned week on a public project board with a roadmap
+  ([how to read it](docs/BOARD.md)); every change goes through a pull request, in every
+  repository.
 - CI security gates shared by the repositories: secret scanning, CodeQL, Semgrep,
   dependency review, image scanning, DAST, OpenSSF Scorecard.
 - Signed commits; signed images with an SBOM and build provenance.
