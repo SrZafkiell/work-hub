@@ -20,8 +20,14 @@ to build in public.
 
 ## Issues
 
+### work-hub
+
 - P0-01 [chore] Repository files -- Done when: merged.
 - P0-02 [security] Settings -- Done when: the settings are on.
+
+### work-hub-backend
+
+- P0-03 [chore] Demo data -- Done when: a seed command exists.
 """
 
 
@@ -47,9 +53,33 @@ class ParsePlanTest(unittest.TestCase):
             milestones, issues = plan_sync.parse_plan(path)
         self.assertEqual(milestones[0]["title"], "P0 - Foundation")
         self.assertEqual(milestones[0]["goal"], "A repository that is safe to build in public.")
-        self.assertEqual([i["id"] for i in issues], ["P0-01", "P0-02"])
+        self.assertEqual([i["id"] for i in issues], ["P0-01", "P0-02", "P0-03"])
         self.assertEqual(issues[1]["type"], "security")
         self.assertEqual(issues[1]["done"], "the settings are on.")
+
+    def test_issue_takes_the_repository_of_its_heading(self):
+        with PlanDir({"P0-foundation.md": GOOD}) as path:
+            _, issues = plan_sync.parse_plan(path)
+        self.assertEqual([i["repo"] for i in issues],
+                         ["work-hub", "work-hub", "work-hub-backend"])
+
+    def test_rejects_issue_outside_a_repository_heading(self):
+        text = GOOD.replace("### work-hub\n\n", "", 1)
+        with PlanDir({"P0-foundation.md": text}) as path:
+            with self.assertRaisesRegex(ValueError, "not under a repository heading"):
+                plan_sync.parse_plan(path)
+
+    def test_rejects_unknown_repository(self):
+        text = GOOD.replace("### work-hub-backend", "### somewhere-else")
+        with PlanDir({"P0-foundation.md": text}) as path:
+            with self.assertRaisesRegex(ValueError, "unknown repository"):
+                plan_sync.parse_plan(path)
+
+    def test_repository_heading_ends_with_the_section(self):
+        text = GOOD + "\n## Measures\n\n- P0-04 [test] Late -- Done when: never.\n"
+        with PlanDir({"P0-foundation.md": text}) as path:
+            with self.assertRaisesRegex(ValueError, "not under a repository heading"):
+                plan_sync.parse_plan(path)
 
     def test_rejects_issue_from_another_milestone(self):
         text = GOOD + "- M01-01 [chore] Elsewhere -- Done when: never.\n"
@@ -58,7 +88,7 @@ class ParsePlanTest(unittest.TestCase):
                 plan_sync.parse_plan(path)
 
     def test_rejects_unknown_type(self):
-        text = GOOD + "- P0-03 [epic] Too big -- Done when: never.\n"
+        text = GOOD + "- P0-04 [epic] Too big -- Done when: never.\n"
         with PlanDir({"P0-foundation.md": text}) as path:
             with self.assertRaisesRegex(ValueError, "unknown type"):
                 plan_sync.parse_plan(path)
@@ -85,6 +115,22 @@ class ParsePlanTest(unittest.TestCase):
         self.assertEqual({m["id"] for m in milestones}, set(plan_sync.AREAS))
         with_issues = {i["milestone"] for i in issues}
         self.assertEqual(with_issues, set(plan_sync.AREAS))
+        self.assertLessEqual({i["repo"] for i in issues}, set(plan_sync.REPOS))
+
+
+class RepositoryViewsTest(unittest.TestCase):
+    def setUp(self):
+        with PlanDir({"P0-foundation.md": GOOD}) as path:
+            self.milestones, self.issues = plan_sync.parse_plan(path)
+
+    def test_repositories_in_use_follow_the_configured_order(self):
+        self.assertEqual(plan_sync.repos_in_use(self.issues), ["work-hub", "work-hub-backend"])
+
+    def test_milestones_of_a_repository_are_only_those_with_issues_there(self):
+        frontend = plan_sync.milestones_of("work-hub-frontend", self.milestones, self.issues)
+        backend = plan_sync.milestones_of("work-hub-backend", self.milestones, self.issues)
+        self.assertEqual(frontend, [])
+        self.assertEqual([m["id"] for m in backend], ["P0"])
 
 
 class BodyAndLabelsTest(unittest.TestCase):
@@ -92,7 +138,7 @@ class BodyAndLabelsTest(unittest.TestCase):
         issue = {"id": "M08-06", "done": "it holds.", "file": "M08-meetings.md"}
         body = plan_sync.issue_body(issue)
         self.assertEqual(plan_sync.MARKER.search(body)["id"], "M08-06")
-        self.assertIn("blob/main/docs/plan/M08-meetings.md", body)
+        self.assertIn("work-hub/blob/main/docs/plan/M08-meetings.md", body)
         self.assertTrue(body.startswith("**Done when:** it holds."))
 
     def test_manual_labels_survive_and_managed_ones_are_replaced(self):
@@ -101,6 +147,11 @@ class BodyAndLabelsTest(unittest.TestCase):
             ["type:security", "area:meetings"],
         )
         self.assertEqual(merged, ["good first issue", "type:security", "area:meetings"])
+
+    def test_issue_url_gives_repository_and_number(self):
+        found = plan_sync.ISSUE_URL.search(
+            "https://github.com/SrZafkiell/work-hub-backend/issues/12\n")
+        self.assertEqual((found["repo"], found["number"]), ("work-hub-backend", "12"))
 
 
 if __name__ == "__main__":
