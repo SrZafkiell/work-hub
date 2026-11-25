@@ -8,14 +8,28 @@ in with a passkey, and see what matters today across your workspaces. A wall sta
 between them: focus mode shows one workspace only, so sharing your screen never shows
 the rest.
 
-> Status: planning. See [the plan](docs/PLAN.md); work is tracked in issues and
-> milestones.
+> Status: planning. See [the plan](docs/PLAN.md); work is tracked in issues, milestones
+> and one [project board](https://github.com/users/SrZafkiell/projects/2) across the
+> repositories.
+
+## Repositories
+
+| Repository | What it holds |
+|---|---|
+| work-hub (this one) | The plan, decisions and risk register; the server setup, the deploy agent and the release manifests; end-to-end tests; the shared CI workflows |
+| [work-hub-backend](https://github.com/SrZafkiell/work-hub-backend) | The FastAPI application, the worker, the admin CLI and the OpenAPI contract |
+| [work-hub-frontend](https://github.com/SrZafkiell/work-hub-frontend) | The React and TypeScript web app |
+| [work-hub-desktop](https://github.com/SrZafkiell/work-hub-desktop) | The desktop app, planned as a later module |
+
+The contract published by the backend is the only coupling between them. A release of
+the product is a signed manifest here that pins a backend image and a frontend image
+that were tested together.
 
 ## Modules
 
 | Area | Module | What it does |
 |---|---|---|
-| Core | M01 App skeleton | An installable web app, an API with a checked contract, a real database in tests |
+| Core | M01 App skeleton | An installable web app, an API with a versioned contract, a real database in tests |
 | Core | M02 Accounts and sign-in | Passkeys only; the owner creates every account, there is no sign-up page |
 | Core | M03 Workspaces | Work, side projects, personal and studies, kept apart by the database, with a focus mode |
 | Core | M04 Tasks | Quick add, a Today view across workspaces, follow-ups for what others owe you |
@@ -45,9 +59,10 @@ shared workspaces. See [later modules](docs/PLAN.md#later-modules).
 
 ## Engineering standards
 
-- Issues, milestones and a public project board; every change through a pull request.
-- CI security gates: secret scanning, CodeQL, Semgrep, dependency review, image
-  scanning, DAST, OpenSSF Scorecard.
+- Issues, milestones and a public project board; every change through a pull request,
+  in every repository.
+- CI security gates shared by the repositories: secret scanning, CodeQL, Semgrep,
+  dependency review, image scanning, DAST, OpenSSF Scorecard.
 - Signed commits; signed images with an SBOM and build provenance.
 - An architecture decision record for every significant decision, a threat model and a
   [risk register](docs/RISKS.md).
