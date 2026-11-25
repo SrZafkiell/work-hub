@@ -1,6 +1,6 @@
 # M06 - Calendars
 
-Track: C. Size: XL. Depends on: M03, P1. Unlocks: M07 (event reminders), M08.
+Track: C. Phase: 2. Size: XL. Depends on: M03, P1. Unlocks: M07 (event reminders), M08.
 
 ## Goal
 
@@ -44,34 +44,46 @@ read-only, current within minutes, and honest about clashes.
 
 ### work-hub
 
-- M06-01 [spike] Which accounts can connect -- Done when: a test app asks for read-only calendar access from a personal and an organization account at each provider, and the result, the approval an administrator must give and the fallback for each refusal are written down; runs during Phase 1.
-- M06-02 [adr] Calendar access model -- Done when: accepted: read-only scopes, polling with incremental sync, the stored fields, the busy-only level and the fallbacks.
-- M06-03 [adr] Background jobs on PostgreSQL -- Done when: accepted: a worker process with a database-backed queue instead of a message broker, with the limits that would change the choice.
-- M06-19 [chore] Worker in the Compose stack -- Done when: the worker container runs from the API image with the same hardening, limits and health check as the API, and the outside heartbeat watches it.
+- M06-01 [spike p1] Which accounts can connect -- Done when: a test app asks for read-only calendar access from a personal and an organization account at each provider, and the result, the approval an administrator must give and the fallback for each refusal are written down; runs during Phase 1.
+- M06-02 [adr p1] Calendar access model -- Done when: accepted: read-only scopes, polling with incremental sync, the stored fields, the busy-only level and the fallbacks.
+- M06-03 [adr p2] Background jobs on PostgreSQL -- Done when: accepted: a worker process with a database-backed queue instead of a message broker, with the limits that would change the choice.
+- M06-19 [chore p1] Worker in the Compose stack -- Done when: the worker container runs from the API image with the same hardening, limits and health check as the API, and the outside heartbeat watches it.
 
 ### work-hub-backend
 
-- M06-04 [feature] Worker service -- Done when: a worker command runs scheduled and queued jobs with retries, back-off and a heartbeat, and survives a restart without losing or repeating work.
-- M06-05 [security] Token vault -- Done when: refresh tokens are encrypted with a key outside the database and its backups, the key can be rotated, tokens never appear in logs or API responses, and a test on a database dump proves it.
-- M06-06 [feature] Connect a Google account -- Done when: the authorization-code flow with PKCE, state and an exact redirect address grants the read-only calendar scopes after a step-up check, and the OAuth app is in production mode.
-- M06-07 [feature] Connect a Microsoft account -- Done when: the same flow works for organization and personal Microsoft accounts with delegated read-only calendar access.
-- M06-08 [feature] ICS subscription -- Done when: a secret calendar address can be added as a read-only source, stored like a token, and fetched by a client that refuses private addresses, redirects to them, large bodies and slow responses.
-- M06-09 [feature] Calendar selection and workspace mapping -- Done when: after connecting, the calendars of an account can be listed and each one given a workspace and a detail level, and nothing syncs before that.
-- M06-10 [feature] Sync engine -- Done when: each calendar syncs incrementally, recovers from an expired sync token with a full resync, backs off on limits, handles moved, cancelled and deleted events, and repeating a sync changes nothing.
-- M06-11 [feature] Change notifications -- Done when: provider notifications are validated, trigger an early sync, are renewed before they expire, and losing them only falls back to the polling interval.
-- M06-13 [feature] Clash detection -- Done when: the agenda query marks overlapping events from different calendars, busy-only events included, and ignores declined events.
-- M06-14 [feature] Join links -- Done when: the meeting link of an event is found at sync time and returned with the event.
-- M06-15 [security] Untrusted event content -- Done when: event text is stored as plain text with size limits, the server never fetches a link from an event, and tests cover script, markup and oversized fields.
-- M06-16 [security] Disconnect and revoke -- Done when: one request revokes the grant at the provider, deletes the stored tokens and, on request, the synced events; and a `hubctl` command revokes every connected account at once and was run once.
-- M06-17 [feature] Sync status and alerts -- Done when: the status endpoint reports the last and next sync and the errors per account, and the owner is alerted when an account stops syncing.
-- M06-18 [test] Provider contract tests -- Done when: recorded provider responses with made-up data cover paging, expired tokens, throttling and deletions, and a nightly job checks the live APIs with test accounts.
-- M06-21 [feature] Agenda query -- Done when: one endpoint returns the events of the calendars in view for a range of days, with all-day and multi-day events and each event's time zone, under the same walls as everything else.
+- M06-04 [feature p1] Worker service -- Done when: a worker command runs scheduled and queued jobs with retries, back-off and a heartbeat, and survives a restart without losing or repeating work.
+- M06-05 [security p1] Token vault -- Done when: refresh tokens are encrypted with a key outside the database and its backups, the key can be rotated, tokens never appear in logs or API responses, and a test on a database dump proves it.
+- M06-06 [feature p1] Connect a Google account -- Done when: the authorization-code flow with PKCE, state and an exact redirect address grants the read-only calendar scopes after a step-up check, and the OAuth app is in production mode.
+- M06-07 [feature p1] Connect a Microsoft account -- Done when: the same flow works for organization and personal Microsoft accounts with delegated read-only calendar access.
+- M06-08 [feature p2] ICS subscription -- Done when: a secret calendar address can be added as a read-only source, stored like a token, and fetched by a client that refuses private addresses, redirects to them, large bodies and slow responses.
+- M06-09 [feature p1] Calendar selection and workspace mapping -- Done when: after connecting, the calendars of an account can be listed and each one given a workspace and a detail level, and nothing syncs before that.
+- M06-10 [feature p1] Sync engine -- Done when: each calendar syncs incrementally, recovers from an expired sync token with a full resync, backs off on limits, handles moved, cancelled and deleted events, and repeating a sync changes nothing.
+- M06-11 [feature p3] Change notifications -- Done when: provider notifications are validated, trigger an early sync, are renewed before they expire, and losing them only falls back to the polling interval.
+- M06-13 [feature p2] Clash detection -- Done when: the agenda query marks overlapping events from different calendars, busy-only events included, and ignores declined events.
+- M06-14 [feature p2] Join links -- Done when: the meeting link of an event is found at sync time and returned with the event.
+- M06-15 [security p1] Untrusted event content -- Done when: event text is stored as plain text with size limits, the server never fetches a link from an event, and tests cover script, markup and oversized fields.
+- M06-16 [security p1] Disconnect and revoke -- Done when: one request revokes the grant at the provider, deletes the stored tokens and, on request, the synced events; and a `hubctl` command revokes every connected account at once and was run once.
+- M06-17 [feature p2] Sync status and alerts -- Done when: the status endpoint reports the last and next sync and the errors per account, and the owner is alerted when an account stops syncing.
+- M06-18 [test p2] Provider contract tests -- Done when: recorded provider responses with made-up data cover paging, expired tokens, throttling and deletions, and a nightly job checks the live APIs with test accounts.
+- M06-21 [feature p1] Agenda query -- Done when: one endpoint returns the events of the calendars in view for a range of days, with all-day and multi-day events and each event's time zone, under the same walls as everything else.
 
 ### work-hub-frontend
 
-- M06-12 [feature] Merged agenda -- Done when: day and week views show every calendar in view with workspace colors, all-day and multi-day events, the right local time for events created in other time zones, clashes marked, the join link as one action, and focus mode.
-- M06-20 [feature] Connected accounts screens -- Done when: the user connects a Google or a Microsoft account or adds an ICS address behind the step-up prompt, chooses the calendars with their workspace and detail level, sees the sync state of each, and disconnects with one action.
-- M06-22 [security] Event text renders as plain text -- Done when: titles, locations and names from events are never interpreted as markup or links on any screen or in any notification, with tests for script and markup.
+- M06-12 [feature p1] Merged agenda -- Done when: day and week views show every calendar in view with workspace colors, all-day and multi-day events, the right local time for events created in other time zones, clashes marked, the join link as one action, and focus mode.
+- M06-20 [feature p1] Connected accounts screens -- Done when: the user connects a Google or a Microsoft account or adds an ICS address behind the step-up prompt, chooses the calendars with their workspace and detail level, sees the sync state of each, and disconnects with one action.
+- M06-22 [security p1] Event text renders as plain text -- Done when: titles, locations and names from events are never interpreted as markup or links on any screen or in any notification, with tests for script and markup.
+
+## Schedule
+
+Planned weeks. Each issue starts on the Monday shown and is due that Sunday; the module's
+epic and its milestone end with the last week. Dates change here first, and the sync
+script moves the board.
+
+| Week of | Issues |
+|---|---|
+| 2026-12-28 | M06-01 |
+| 2027-01-11 | M06-02, M06-03, M06-04, M06-05, M06-06, M06-07, M06-08, M06-09, M06-15, M06-19 |
+| 2027-01-18 | M06-10, M06-11, M06-12, M06-13, M06-14, M06-16, M06-17, M06-18, M06-20, M06-21, M06-22 |
 
 ## Measures
 

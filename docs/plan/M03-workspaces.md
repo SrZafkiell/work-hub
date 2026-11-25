@@ -1,6 +1,6 @@
 # M03 - Workspaces
 
-Track: B. Size: L. Depends on: M02. Unlocks: M04, M06.
+Track: B. Phase: 1. Size: L. Depends on: M02. Unlocks: M04, M06.
 
 ## Goal
 
@@ -33,26 +33,36 @@ database itself, with a focus mode that makes one workspace the whole app.
 
 ### work-hub
 
-- M03-01 [adr] Workspace isolation with row-level security -- Done when: accepted, covering the policy model, the per-transaction settings, pooling, the database roles and how tests prove it.
+- M03-01 [adr p1] Workspace isolation with row-level security -- Done when: accepted, covering the policy model, the per-transaction settings, pooling, the database roles and how tests prove it.
 
 ### work-hub-backend
 
-- M03-02 [feature] Workspaces and memberships -- Done when: an account can create, rename, color and archive workspaces of a kind (work, side project, personal, studies), and a new account starts with a personal workspace.
-- M03-03 [security] Row-level security policies and guard -- Done when: every table with a workspace ID has forced policies for reads and writes, the app role cannot bypass them, and CI fails on a new table without a policy.
-- M03-04 [test] Isolation tests in both directions -- Done when: for every endpoint a member can, and a non-member cannot, read, write or reference a row by ID across workspaces and across accounts, and the suite fails when a new endpoint has no such test.
-- M03-05 [test] Pooled connections start clean -- Done when: a test proves that the workspace settings of one request never apply to the next request on the same connection.
-- M03-06 [feature] Focus mode in the session -- Done when: a session can be narrowed to one workspace and widened again, the database enforces the limit, and every list, count, search and export returns only that workspace while it is on.
-- M03-07 [feature] Moving items between workspaces -- Done when: a move is the only way data crosses a workspace, the request must confirm it explicitly, and it is recorded in the audit log.
-- M03-08 [feature] Workspace export -- Done when: a workspace exports to an archive of JSON and Markdown after a step-up check, and an export of the demo data imports again without loss.
-- M03-09 [feature] Archive and delete a workspace -- Done when: an archived workspace is read-only and hidden; deletion removes its rows after a step-up check and a waiting period; and the runbook says when backups stop containing it.
-- M03-10 [feature] Workspace settings -- Done when: each workspace has switches for the optional features, all off by default, and the API refuses a feature that is off.
-- M03-11 [feature] Audit log -- Done when: exports, moves, deletions, connections and setting changes are recorded per workspace in an append-only table that the app role cannot update or delete, and a member can read it.
+- M03-02 [feature p1] Workspaces and memberships -- Done when: an account can create, rename, color and archive workspaces of a kind (work, side project, personal, studies), and a new account starts with a personal workspace.
+- M03-03 [security p1] Row-level security policies and guard -- Done when: every table with a workspace ID has forced policies for reads and writes, the app role cannot bypass them, and CI fails on a new table without a policy.
+- M03-04 [test p1] Isolation tests in both directions -- Done when: for every endpoint a member can, and a non-member cannot, read, write or reference a row by ID across workspaces and across accounts, and the suite fails when a new endpoint has no such test.
+- M03-05 [test p1] Pooled connections start clean -- Done when: a test proves that the workspace settings of one request never apply to the next request on the same connection.
+- M03-06 [feature p2] Focus mode in the session -- Done when: a session can be narrowed to one workspace and widened again, the database enforces the limit, and every list, count, search and export returns only that workspace while it is on.
+- M03-07 [feature p2] Moving items between workspaces -- Done when: a move is the only way data crosses a workspace, the request must confirm it explicitly, and it is recorded in the audit log.
+- M03-08 [feature p3] Workspace export -- Done when: a workspace exports to an archive of JSON and Markdown after a step-up check, and an export of the demo data imports again without loss.
+- M03-09 [feature p3] Archive and delete a workspace -- Done when: an archived workspace is read-only and hidden; deletion removes its rows after a step-up check and a waiting period; and the runbook says when backups stop containing it.
+- M03-10 [feature p2] Workspace settings -- Done when: each workspace has switches for the optional features, all off by default, and the API refuses a feature that is off.
+- M03-11 [feature p2] Audit log -- Done when: exports, moves, deletions, connections and setting changes are recorded per workspace in an append-only table that the app role cannot update or delete, and a member can read it.
 
 ### work-hub-frontend
 
-- M03-12 [feature] Workspace switcher and management -- Done when: the user creates, renames, colors and archives workspaces, and switches between them from any screen with the keyboard or a tap.
-- M03-13 [feature] Focus mode in the app -- Done when: one shortcut turns focus on or off, the app shows clearly that it is on, and no screen, cache or notification keeps data of another workspace while it is on.
-- M03-14 [feature] Workspace settings, export and deletion screens -- Done when: a workspace's switches, export, archive, deletion and audit log are on its settings page, with each sensitive action behind the step-up prompt and a typed confirmation.
+- M03-12 [feature p1] Workspace switcher and management -- Done when: the user creates, renames, colors and archives workspaces, and switches between them from any screen with the keyboard or a tap.
+- M03-13 [feature p2] Focus mode in the app -- Done when: one shortcut turns focus on or off, the app shows clearly that it is on, and no screen, cache or notification keeps data of another workspace while it is on.
+- M03-14 [feature p3] Workspace settings, export and deletion screens -- Done when: a workspace's switches, export, archive, deletion and audit log are on its settings page, with each sensitive action behind the step-up prompt and a typed confirmation.
+
+## Schedule
+
+Planned weeks. Each issue starts on the Monday shown and is due that Sunday; the module's
+epic and its milestone end with the last week. Dates change here first, and the sync
+script moves the board.
+
+| Week of | Issues |
+|---|---|
+| 2026-12-21 | M03-01, M03-02, M03-03, M03-04, M03-05, M03-06, M03-07, M03-08, M03-09, M03-10, M03-11, M03-12, M03-13, M03-14 |
 
 ## Measures
 
