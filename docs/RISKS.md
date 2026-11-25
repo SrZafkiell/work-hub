@@ -53,11 +53,22 @@ milestone; the issue IDs point to the plan files in [plan/](plan/).
 | Backups hold everything | A leaked backup exposes every workspace | Encryption before upload, the token key backed up separately | P1-12 |
 | A deleted workspace survives in backups | Data outlives its deletion | The retention period is documented, and the runbook says when backups stop containing it | M03-09, P1-12 |
 | Single maintainer | Reviews are self-reviews | Required checks, signed commits and scanners; the cap is noted in the Scorecard results | P0-05, P0-18 |
-| Signer identity tied to the repository name | A rename breaks verification; a re-created name could pass a name-only check | The name is settled before the first signed build; verification also checks the repository ID | P2-03 |
+| Signer identity tied to repository names | A rename breaks verification; a re-created name could pass a name-only check | The names are settled before the first signed build; verification also checks the repository IDs and the workflow that built the image | P2-03 |
 | Rebase merges create commits without signature verification | Required signed commits and per-concern commits conflict | Merge commits: branch commits are signed by the author, merge commits by GitHub | P0-05, P0-06 |
 | Public repository: untrusted pull requests | Secrets or runners exposed | GitHub-hosted runners only; no `pull_request_target`; actionlint and zizmor; secrets only in jobs on `main` | P0-16 |
 | Git for Windows converts LF to CRLF on checkout by default | Shell scripts and configs break on the server | `.gitattributes` forces LF (CRLF only for PowerShell scripts) | P0-02 |
-| Real data reaches the repository | Private notes or names become public for good | Demo data only, a CI guard on email addresses, secret scanning with push protection | P0-03, P0-23, P0-24 |
+| Real data reaches a repository | Private notes or names become public for good | Demo data only, a CI guard on email addresses in every repository, secret scanning with push protection | P0-03, P0-23, P0-24 |
+
+## Several repositories
+
+| Risk | Effect | Mitigation | Where |
+|---|---|---|---|
+| The web app and the API are released separately | A new web app meets an old API, or the reverse, and breaks | An additive contract within a major version, the previous version served for one release, a handshake that tells an outdated client to update, and a release manifest that pins a tested pair | M01-05, M01-12, M01-13, P2-16 |
+| A feature needs pull requests in two repositories | Half of it is merged, or the client is generated from a stale contract | The backend change lands first, behind the contract; the client pins a contract version and gets an automated pull request for a newer one | M01-05, M01-11 |
+| Rules, scanners and settings exist once per repository | One repository drifts from the standard | Reusable workflows called by every repository, one issue per rule that covers them all, a Scorecard run in each | P0-03, P0-05, P0-16, P0-18 |
+| A reusable workflow is trusted by every repository | A bad change to it weakens every build | Callers pin it by commit SHA; a change to it goes through a pull request with the same gates | P0-16 |
+| Issues are spread across repositories | Work is lost between them | The plan files in the home repository are the single source; the sync files each issue in its repository, and one board lists them all | P0-07, P0-08 |
+| Two images make one release | A pair that was never tested together reaches the server | The manifest pins digests only after the end-to-end tests passed on that pair; the deploy agent follows the manifest and nothing else | P2-06, P2-10, P2-16 |
 
 ## Sync and offline (later)
 
