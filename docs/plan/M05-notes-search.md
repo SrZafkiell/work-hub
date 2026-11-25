@@ -13,9 +13,9 @@ anything in view, in English or Spanish.
   two devices cannot silently overwrite each other.
 - Links connect notes and tasks (later meetings and people); each side shows what links
   to it.
-- Rendered Markdown is untrusted: HTML is sanitized, scripts never run, remote images
-  are not loaded (they would reveal that a note was opened), and links open without a
-  referrer.
+- Markdown is rendered in the web app and is untrusted: HTML is sanitized, scripts never
+  run, remote images are not loaded (they would reveal that a note was opened), and
+  links open without a referrer.
 - Search uses PostgreSQL full-text search with English and Spanish configurations and
   accent-insensitive matching. It runs under the same row-level security, so it cannot
   return another workspace or ignore focus mode.
@@ -24,13 +24,20 @@ anything in view, in English or Spanish.
 
 ## Issues
 
-- M05-01 [feature] Notes -- Done when: Markdown notes can be created, pinned, tagged and edited with autosave, and a stale save is refused with a way to merge.
-- M05-02 [feature] Links and backlinks -- Done when: a note and a task can link to each other from either side, and each shows what links to it.
-- M05-03 [security] Safe Markdown rendering -- Done when: a corpus of script, HTML and link attacks renders harmlessly, remote images are blocked by the content security policy, and the test runs in CI.
+### work-hub-backend
+
+- M05-01 [feature] Notes -- Done when: Markdown notes can be created, pinned, tagged and updated with the version counter, and a stale update is refused with the current version in the answer.
+- M05-02 [feature] Links and backlinks -- Done when: a note and a task can be linked from either side inside one workspace, and each returns what links to it.
 - M05-04 [feature] Full-text search -- Done when: one query searches tasks and notes in English and Spanish, ignores accents, ranks by relevance and recency, and filters by workspace, kind and date.
 - M05-05 [test] Search respects the walls -- Done when: tests prove that search never returns rows outside the workspaces in view, with and without focus mode.
-- M05-06 [feature] Command palette -- Done when: one shortcut opens a palette that searches, jumps to a workspace or an item, and creates a task or a note.
 - M05-07 [test] Search quality and budget -- Done when: fixture queries in both languages return the expected items, and a p95 budget from a measured baseline is enforced in CI.
+
+### work-hub-frontend
+
+- M05-03 [security] Safe Markdown rendering -- Done when: a corpus of script, HTML and link attacks renders harmlessly, remote images are blocked by the content security policy, and the test runs in CI.
+- M05-06 [feature] Command palette -- Done when: one shortcut opens a palette that searches, jumps to a workspace or an item, and creates a task or a note.
+- M05-08 [feature] Note editor -- Done when: a note is edited as Markdown with a preview and autosave, and a stale save offers a merge instead of overwriting.
+- M05-09 [feature] Links and backlinks in the app -- Done when: a note and a task are linked from either side with a picker, and each shows what links to it.
 
 ## Measures
 

@@ -1,10 +1,40 @@
 # work-hub plan
 
 work-hub is a self-hosted web app for your work and your personal projects: tasks,
-meetings, notes and calendars, kept in separate workspaces. It is built from modules.
-Each module is a GitHub milestone with its own plan file in [docs/plan/](plan/), its own
-ADRs, tests and measured results, so modules can be built one at a time or in parallel.
-Known constraints and how the plan handles them are in [RISKS.md](RISKS.md).
+meetings, notes and calendars, kept in separate workspaces. It is built from modules and
+split across repositories, one per part. Each module is a milestone with its own plan
+file in [docs/plan/](plan/), its own ADRs, tests and measured results, so modules can be
+built one at a time or in parallel. Known constraints and how the plan handles them are
+in [RISKS.md](RISKS.md).
+
+## Repositories
+
+| Repository | Holds | Ships |
+|---|---|---|
+| [work-hub](https://github.com/SrZafkiell/work-hub) (this one) | The plan, ADRs, threat model and risk register; the server baseline, Compose files, proxy rules, deploy agent and backups; end-to-end and load tests; the shared CI workflows | Release manifests: which backend and frontend images run together |
+| [work-hub-backend](https://github.com/SrZafkiell/work-hub-backend) | The FastAPI application, the worker, the `hubctl` admin CLI, migrations and the OpenAPI contract | A signed API image; the contract as a versioned artifact |
+| [work-hub-frontend](https://github.com/SrZafkiell/work-hub-frontend) | The React and TypeScript web app and its service worker | A signed web image of static files |
+| [work-hub-desktop](https://github.com/SrZafkiell/work-hub-desktop) | The desktop app, a later module (no issues yet) | Signed installers |
+
+How they fit together:
+
+- **The contract is the only coupling.** The backend publishes its OpenAPI document with
+  every release. Each client pins a contract version and generates its code from it. The
+  backend may not break a published contract: within a major version every change is
+  additive, and CI checks it.
+- **Either side can deploy alone.** The API serves the previous contract version for at
+  least one release, and a client that is too old is told so. The desktop app will lag
+  behind the API by design, so the rule is needed in any case.
+- **A product release is a manifest.** Each code repository builds, scans and signs its
+  own image on `main`. A release in `work-hub` is a signed manifest that pins one backend
+  digest and one frontend digest that passed the end-to-end tests together. The deploy
+  agent follows the manifest and nothing else.
+- **Shared gates.** The CI security gates are reusable workflows in `work-hub`. The other
+  repositories call them pinned by commit SHA, so a gate is fixed in one place.
+- **Issues live where the work happens.** The plan files here are the source for every
+  issue; the sync script files each one in its repository, and one project board spans
+  them all. A feature that needs both sides has one issue per repository in the same
+  milestone, and the backend issue lands first, behind the contract.
 
 ## Ground rules
 
@@ -12,8 +42,8 @@ Known constraints and how the plan handles them are in [RISKS.md](RISKS.md).
   shared with other small services. Outside it there are only the image registry,
   encrypted backups and a heartbeat monitor.
 - **Exposure**: the app is on the public internet under its own hostname, so sign-in is
-  the perimeter. nginx is the only listener on the public interface; the API, the worker
-  and the database bind to loopback or to a private Docker network.
+  the perimeter. nginx is the only listener on the public interface; the API, the web
+  container, the worker and the database bind to loopback or to a private Docker network.
 - **Accounts**: no self-registration. The owner creates each account from the server's
   command line and hands over a one-time enrollment link. Sign-in is by passkey only;
   there is no password to guess, reuse or phish.
@@ -30,11 +60,13 @@ Known constraints and how the plan handles them are in [RISKS.md](RISKS.md).
   migration, so a desktop app with offline sync can follow without a rewrite.
 - **Pull-based delivery**: CI runs on GitHub-hosted runners and signs every image; the
   server pulls and verifies. No runner on the server, no inbound path from CI.
-- **Pull requests only**: every change goes through a pull request with all checks green.
-- **Decisions in writing**: every significant decision gets an ADR in `docs/adr/`.
-- **Evidence**: no number goes in the README unless a test or a script produced it.
+- **Pull requests only**: every change, in every repository, goes through a pull request
+  with all checks green.
+- **Decisions in writing**: every significant decision gets an ADR in `docs/adr/` of this
+  repository, whichever repository it affects.
+- **Evidence**: no number goes in a README unless a test or a script produced it.
 - **Demo data only**: fixtures, screenshots, issues and recordings use one made-up
-  company and made-up people. Real notes and calendars never enter the repository.
+  company and made-up people. Real notes and calendars never enter a repository.
 
 ## Architecture
 
@@ -45,6 +77,7 @@ flowchart LR
   end
   subgraph SRV["Server: Docker Compose"]
     NGX["nginx: TLS, rate limits"]
+    WEB["Web: static files"]
     API["API: FastAPI"]
     WRK["Worker: sync, reminders, digests"]
     PG[("PostgreSQL: row-level security")]
@@ -59,6 +92,7 @@ flowchart LR
     BAK["Off-server backup storage"]
   end
   PWA --> NGX
+  NGX --> WEB
   NGX --> API
   API --> PG
   WRK --> PG
@@ -73,22 +107,26 @@ flowchart LR
   PG --> BAK
 ```
 
-The worker joins the stack with M06; Phase 1 runs the API and the database only.
+nginx serves both containers under one hostname, so the web app and the API share an
+origin. The worker joins the stack with M06; Phase 1 runs the web container, the API and
+the database.
 
 ## Components
 
-| Component | Technology | Modules |
-|---|---|---|
-| Web app | React, TypeScript, Vite; installable (service worker, Web Push) | M01 to M08 |
-| API | Python, FastAPI, SQLAlchemy, Alembic; OpenAPI is the contract | M01 to M08 |
-| Admin CLI (`hubctl`) | Python, inside the API image; runs only on the server | M02, M03 |
-| Database | PostgreSQL: row-level security, full-text search | all |
-| Worker | The API image with another command; a queue in PostgreSQL | M06, M07 |
-| Reverse proxy | nginx on the host, Let's Encrypt certificates | P1 |
-| Server baseline | Ansible | P1 |
-| Backups | Database dumps, encrypted before they leave the server | P1 |
-| Deploy agent | A systemd timer, cosign verification, Docker Compose | P2 |
-| Calendar connectors | Google Calendar API, Microsoft Graph, ICS subscriptions | M06 |
+| Component | Technology | Repository | Modules |
+|---|---|---|---|
+| Web app | React, TypeScript, Vite; installable (service worker, Web Push) | work-hub-frontend | M01 to M08 |
+| API | Python, FastAPI, SQLAlchemy, Alembic; OpenAPI is the contract | work-hub-backend | M01 to M08 |
+| Admin CLI (`hubctl`) | Python, inside the API image; runs only on the server | work-hub-backend | M02, M03 |
+| Worker | The API image with another command; a queue in PostgreSQL | work-hub-backend | M06, M07 |
+| Calendar connectors | Google Calendar API, Microsoft Graph, ICS subscriptions | work-hub-backend | M06 |
+| Database | PostgreSQL: row-level security, full-text search | work-hub-backend (schema), work-hub (roles, backups) | all |
+| Reverse proxy | nginx on the host, Let's Encrypt certificates | work-hub | P1 |
+| Server baseline | Ansible | work-hub | P1 |
+| Backups | Database dumps, encrypted before they leave the server | work-hub | P1 |
+| Deploy agent | A systemd timer, cosign verification, Docker Compose | work-hub | P2 |
+| End-to-end and load tests | Playwright, k6 | work-hub | M01, P2 |
+| Desktop app | A shell around the web app with a local store (later) | work-hub-desktop | later |
 
 ## Data walls
 
@@ -99,20 +137,31 @@ The worker joins the stack with M06; Phase 1 runs the API and the database only.
 | Between the hub and other services on the server | Its own Compose project, network, volumes and system user; loopback-only ports |
 | Between the database and connected-account tokens | Encryption with a key outside the database and its backups |
 | Between CI and the server | Pull-based delivery; no credential for the server exists in CI |
-| Between the repository and real data | Demo data only; a CI guard on email addresses |
+| Between the repositories and real data | Demo data only; a CI guard on email addresses |
 
 ## Code layout
 
 ```
-api/          FastAPI app: routers, services, models, migrations, the hubctl admin CLI
-web/          React and TypeScript web app
-infra/        compose files, nginx, ansible, deploy agent, backup scripts
-tests/        end-to-end tests (Playwright), load tests (k6), fixtures with demo data
-docs/         plan, adr, threat-model, runbooks, results
-scripts/      plan sync and repository checks
+work-hub/
+  infra/        compose files, nginx, ansible, deploy agent, backup scripts
+  tests/        end-to-end tests (Playwright), load tests (k6)
+  docs/         plan, adr, threat-model, runbooks, results
+  scripts/      plan sync and repository checks
+  .github/      reusable workflows that the other repositories call
+
+work-hub-backend/
+  app/          routers, services, models, the worker, the hubctl admin CLI
+  migrations/   Alembic migrations and row-level security policies
+  openapi/      the committed contract
+  tests/        unit and integration tests against a real PostgreSQL
+
+work-hub-frontend/
+  src/          React and TypeScript web app, service worker
+  tests/        unit and component tests
 ```
 
-The repository has one version line: the API, the worker and the web app ship together.
+Each code repository has its own version line. The version of the product is the
+release manifest in `work-hub`.
 
 ## Modules
 
@@ -130,7 +179,8 @@ The repository has one version line: the API, the worker and the web app ship to
 | M07 | Reminders | C | L | M04, M06 | [M07](plan/M07-reminders.md) |
 | M08 | Meetings | C | M | M05, M06 | [M08](plan/M08-meetings.md) |
 
-Sizes are relative effort: S, M, L, XL.
+Sizes are relative effort: S, M, L, XL. A milestone exists, with the same title, in every
+repository that has issues for it.
 
 ## Tracks (for parallel work)
 
@@ -165,7 +215,7 @@ the phase before it ships.
 | Reviews and reports | A weekly summary per workspace ready to paste; time per workspace | M04, M08 | Built from task history and meeting decisions |
 | Task sources | Read-only import of items assigned to you in other trackers, for example GitHub, Jira or Azure DevOps | M04, the token vault of M06 | Same data rules as calendars |
 | iPhone support | Home-screen install and notifications tested and fixed on iOS | M07 | iOS delivers Web Push only to an installed app |
-| Desktop app and offline sync | A desktop shell around the web app (tray, global quick add) with a local store that syncs | The conventions of M01 | Conflict rules are decided here |
+| Desktop app and offline sync | A desktop shell around the web app (tray, global quick add) with a local store that syncs, in `work-hub-desktop` | The conventions of M01 | Conflict rules are decided here |
 | Transcripts | Transcripts made on your own machine, attached to meeting notes | M08 | Only for meetings where every attendee agreed |
 | Automatic meeting notes | Record in the desktop app, transcribe locally, draft the notes | Desktop app, Transcripts | Consent recorded per meeting; off by default |
 | Agent access | A scoped interface for AI assistants: read today's items, add tasks and action items | M04, M08 | Per workspace, off by default; event and note text is untrusted input |
@@ -175,7 +225,7 @@ the phase before it ships.
 
 ## Decisions
 
-ADR numbers are assigned when each record is written.
+ADR numbers are assigned when each record is written. Every ADR lives in this repository.
 
 | Decision | Status | Milestone |
 |---|---|---|
@@ -183,6 +233,7 @@ ADR numbers are assigned when each record is written.
 | Public service with owner-provisioned accounts, instead of a private network | decided | P0 |
 | Web app first; a desktop app later on the same API | decided | P0 |
 | Stack: FastAPI, PostgreSQL, React and TypeScript | decided | P0 |
+| Separate repositories for backend, frontend and desktop, with a home repository | decided | P0 |
 | Merge commits with signed commits (rebase merges drop signature verification) | decided | P0 |
 | Pull-based signed delivery | decided | P0 |
 | Dependabot for dependency updates (first-party, no extra app with write access) | decided | P0 |
@@ -190,9 +241,11 @@ ADR numbers are assigned when each record is written.
 | Admin access to the server | proposed | P1 |
 | Backup target and encryption | proposed | P1 |
 | Build once on `main`, promote digests to releases | proposed | P2 |
+| Release manifest that pins a tested pair of images | proposed | P2 |
 | Deploy agent and its access to Docker | proposed | P2 |
 | Database migrations: expand and contract | proposed | P2 |
 | Web app and API architecture: one origin, OpenAPI contract | proposed | M01 |
+| Contract versioning between repositories | proposed | M01 |
 | Sync-ready data conventions | proposed | M01 |
 | Sign-in with passkeys only | proposed | M02 |
 | Workspace isolation with row-level security | proposed | M03 |
@@ -221,24 +274,27 @@ Before Phase 2:
 ## Working agreements
 
 - Branches `<type>/<issue>-<short-name>`; Conventional Commits; one concern per commit;
-  merge commits, so the signed per-concern commits survive on `main`.
+  merge commits, so the signed per-concern commits survive on `main`. The same in every
+  repository.
 - Definition of done: tests pass, docs updated, ADR written if a decision was made,
   threat model and RISKS.md updated if a trust boundary or a risk changed, results
   updated if a number changed.
 - Every endpoint ships with its isolation tests in both directions (M03-04); a module is
   not done while one is missing.
+- A change of the contract is its own pull request in the backend, merged before the
+  client change that uses it.
 - Labels: `type:*` (feature, bug, chore, ci, docs, security, test, adr, spike) and
-  `area:*` (one per milestone).
-- Public project board: the sync script adds every issue; the built-in Status and
-  Milestone fields carry the state and the module, and saved views filter by track and
-  phase.
-- Issues in each plan file use the form `- <ID> [type] Title -- Done when: ...`. The ID
-  never changes; the sync script uses it to create or update the issue.
+  `area:*` (one per milestone), the same in every repository.
+- One public project board lists the issues of every repository: the sync script adds
+  them; the built-in Status, Repository and Milestone fields carry the state, the part
+  and the module, and saved views filter by repository, track and phase.
+- Issues in each plan file use the form `- <ID> [type] Title -- Done when: ...`, grouped
+  under a `### <repository>` heading. The ID never changes; the sync script uses it to
+  create or update the issue, and moving a line to another heading moves the issue.
 - Fast gates block the merge; slow gates (DAST, load tests) run nightly and block the
   promotion to a release.
-- Parallel work: each module owns its directories; shared files (the base compose file,
-  shared workflows, the OpenAPI contract, this plan) change only in their own pull
-  requests; one git worktree per track.
+- Parallel work: each repository has its own checkout; shared files (the Compose files,
+  the shared workflows, this plan) change only in their own pull requests.
 
 ## Measured results to publish
 
@@ -255,6 +311,6 @@ median. Load tests on seeded demo data state the size of the data set.
 - Sync lag from a change at the provider to the agenda, with polling only and with
   change notifications (M06).
 - Reminder delay and delivery success over a week of daily use on Android (M07).
-- OpenSSF Scorecard score; critical and high CVEs in released images (target 0);
-  medium or higher DAST findings (target 0).
+- OpenSSF Scorecard score per repository; critical and high CVEs in released images
+  (target 0); medium or higher DAST findings (target 0).
 - Lighthouse performance and accessibility scores of the web app.
