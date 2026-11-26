@@ -70,6 +70,9 @@ Everything above this section is published as the README of the board.
 
 `python scripts/plan_sync.py --apply --project 2 --views --guide` files the plan, sets
 the fields of every card, creates the views with their filters and publishes the guide.
+`python scripts/plan_verify.py 2` then reads every card back and lists each difference
+from the plan files; it ends with "problems: 0" when the board equals the plan.
+
 What the API cannot set on a view is saved once in the browser, in the View menu of its
 tab. `python scripts/plan_board.py 2` reports every view that still differs from the
 table below.

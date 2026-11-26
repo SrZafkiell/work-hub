@@ -402,7 +402,8 @@ Before Phase 2:
   issue. A task takes its priority, its dates and its hours from its steps.
 - Each plan file has a `## Schedule` table that gives every step its week, Monday to
   Sunday. Dates change there; the sync script then moves the cards and the due dates of
-  the milestones.
+  the milestones, and `python scripts/plan_verify.py 2` reads the board back and lists
+  every difference from the plan.
 - A pull request has an assignee, the type and area labels and the milestone of its
   step, and names the step in its body: `Closes #N` when it finishes it, `Refs #N` when
   it does not. A step is closed only when its "Done when" holds; a task is closed by
