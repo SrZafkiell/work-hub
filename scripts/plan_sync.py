@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Sync the plan files to GitHub: labels, milestones, epics, issues and the project board.
+"""Sync the plan files to GitHub: labels, milestones, epics, tasks, steps and the board.
 
 docs/plan/*.md in this repository is the source of truth for every repository of the
 project. Each plan file is one module. Its header gives the track, the phase and what the
@@ -7,35 +7,48 @@ module depends on:
 
     Track: A. Phase: 1. Size: L. Depends on: P0. Unlocks: P2.
 
-Each issue line has the form
+The work has three levels. The module is the epic. A task is a deliverable of the module,
+a line of the "## Tasks" section that names its steps:
 
-    - <ID> [type priority] Title -- Done when: ...
+    - <ID> [type] Title -- Done when: ... -- Steps: <step ID>, <step ID>
 
-and sits under a heading that names the repository it belongs to:
+A step is one piece of work, a line of the "## Steps" section
+
+    - <ID> [type priority size] Title -- Done when: ...
+
+under a heading that names the repository it belongs to:
 
     ### work-hub-backend
 
-A "## Schedule" table gives every issue its week, from Monday to Sunday:
+The size is S, M or L and stands for the planned hours in SIZES. A "## Schedule" table
+gives every step its week, from Monday to Sunday:
 
-    | Week of | Issues |
+    | Week of | Steps |
     |---|---|
     | 2026-12-07 | P1-01, P1-02 |
 
-The script keeps one epic per module in the home repository and one issue per line in the
-repository of its heading, matched by the plan ID in a hidden marker in the body, so it
-can be re-run at any time and resumes after a failure. An issue whose line moved under
-another heading is transferred. Titles, bodies, issue types, the parent epic, milestones
-with their due dates and the type, area, priority and phase labels are managed here, and
-an issue nobody holds is assigned to the owner. Discussion belongs in issue comments, and
-labels added by hand are kept. With --project the board gets every epic and issue and
-their Priority, Phase, Track, Start and Target fields; --views and --guide keep the saved
-views and the board's guide (see plan_board.py and docs/BOARD.md).
+A task takes its priority, its dates and its hours from its steps.
+
+The script keeps one epic per module and one issue per task in the home repository, and
+one issue per step in the repository of its heading. Each is matched by its plan ID in a
+hidden marker in the body, so the script can be re-run at any time and resumes after a
+failure. A step whose line moved under another heading is transferred. Titles, bodies,
+issue types, parents (epic, then task, then step), milestones with their due dates and the
+type, area, priority and phase labels are managed here, and an issue nobody holds is
+assigned to the owner. Discussion belongs in issue comments, and labels added by hand are
+kept. With --project the board gets every epic, task and step and their Priority, Phase,
+Track, Estimate, Start and Target fields; --views and --guide keep the saved views and the
+board's guide (see plan_board.py and docs/BOARD.md).
+
+docs/PLAN.md lists the tasks and the hours of every week between marker comments. --write
+refreshes those tables and --check fails when they are behind the plan files.
 
 It is a dry run unless --apply is given. Writes are paced and retried with back-off to
 stay under GitHub's secondary rate limits for content creation.
 
 Usage:
     python scripts/plan_sync.py --check            # parse and validate only
+    python scripts/plan_sync.py --write            # refresh the tables of docs/PLAN.md
     python scripts/plan_sync.py --project 2        # dry run
     python scripts/plan_sync.py --apply --only P0
     python scripts/plan_sync.py --apply --project 2 --views --guide
@@ -55,17 +68,26 @@ OWNER = "SrZafkiell"
 HOME = "work-hub"
 REPOS = ("work-hub", "work-hub-backend", "work-hub-frontend", "work-hub-desktop")
 ASSIGNEE = OWNER
-TASK_TYPE = "Task"
 EPIC_TYPE = "Epic"
+TASK_TYPE = "Task"
+STEP_TYPE = "Step"
+ISSUE_TYPES_URL = "https://github.com/settings/issue-types"
+# Planned hours of a step, by size. An estimate, corrected from what the weeks really take.
+SIZES = {"S": 0.5, "M": 1, "L": 3}
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 PLAN_DIR = ROOT / "docs" / "plan"
+PLAN_DOC = ROOT / "docs" / "PLAN.md"
 GUIDE = ROOT / "docs" / "BOARD.md"
 GUIDE_END = "<!-- maintenance -->"
 PLAN_URL = f"https://github.com/{OWNER}/{HOME}/blob/main/docs/plan/"
 
 MODULE = r"P[0-9]|M[0-9]{2}|R[0-9]"
-ISSUE_LINE = re.compile(
-    rf"^- (?P<id>(?P<ms>{MODULE})-[0-9]{{2}}) \[(?P<type>[a-z]+) (?P<prio>p[0-9])\] "
+TASK_LINE = re.compile(
+    rf"^- (?P<id>(?P<ms>{MODULE})-[A-Z]) \[(?P<type>[a-z]+)\] (?P<title>.+?) "
+    r"-- Done when: (?P<done>.+?) -- Steps: (?P<steps>.+)$"
+)
+STEP_LINE = re.compile(
+    rf"^- (?P<id>(?P<ms>{MODULE})-[0-9]{{2}}) \[(?P<type>[a-z]+) (?P<prio>p[0-9]) (?P<size>[A-Z]+)\] "
     r"(?P<title>.+?) -- Done when: (?P<done>.+)$"
 )
 HEADING = re.compile(rf"^# (?P<ms>{MODULE}) - (?P<name>.+)$")
@@ -76,8 +98,12 @@ HEADER = re.compile(
 MODULE_ID = re.compile(rf"\b(?:{MODULE})\b(?!-)")
 REPO_HEADING = re.compile(r"^### (?P<repo>\S+)$")
 WEEK_ROW = re.compile(r"^\| (?P<week>[0-9]{4}-[0-9]{2}-[0-9]{2}) \| (?P<ids>.+?) \|$")
-MARKER = re.compile(r"<!-- plan-id: (?P<id>[A-Z][0-9]{1,2}-[0-9]{2}) -->")
-EPIC_MARKER = re.compile(r"<!-- plan-epic: (?P<id>[A-Z][0-9]{1,2}) -->")
+# The hidden marker that ties an issue to its line in the plan, per level.
+MARKERS = {
+    "epic": re.compile(r"<!-- plan-epic: (?P<id>[A-Z][0-9]{1,2}) -->"),
+    "task": re.compile(r"<!-- plan-task: (?P<id>[A-Z][0-9]{1,2}-[A-Z]) -->"),
+    "step": re.compile(r"<!-- plan-id: (?P<id>[A-Z][0-9]{1,2}-[0-9]{2}) -->"),
+}
 ISSUE_URL = re.compile(r"https://github\.com/[^/\s]+/(?P<repo>[^/\s]+)/issues/(?P<number>[0-9]+)")
 RATE_LIMITED = re.compile(r"secondary rate limit|rate limit exceeded|abuse|HTTP 429", re.I)
 GATEWAY = re.compile(r"HTTP 50[234]")
@@ -124,6 +150,11 @@ FLAGS = {
 }
 MANAGED_PREFIXES = ("type:", "area:", "prio:", "phase:")
 RETRIES = 6
+TYPES_QUERY = """
+query($owner: String!, $name: String!) {
+  repository(owner: $owner, name: $name) { issueTypes(first: 50) { nodes { name isEnabled } } }
+}
+"""
 
 
 def _paragraph(lines: list[str], start: int) -> str:
@@ -183,7 +214,7 @@ def _weeks(path: pathlib.Path, rows: list[tuple[int, str, str]], ids: list[str])
         last = week
         for plan_id in (part.strip() for part in cell.split(",")):
             if plan_id not in ids:
-                raise ValueError(f"{path.name}:{n}: {plan_id} is not an issue of this file")
+                raise ValueError(f"{path.name}:{n}: {plan_id} is not a step of this file")
             if plan_id in weeks:
                 raise ValueError(f"{path.name}:{n}: {plan_id} is scheduled twice")
             weeks[plan_id] = week
@@ -197,10 +228,53 @@ def _sunday(monday: str) -> str:
     return (datetime.date.fromisoformat(monday) + datetime.timedelta(days=6)).isoformat()
 
 
-def parse_plan(plan_dir: pathlib.Path) -> tuple[list[dict], list[dict]]:
-    """Read every plan file; fail loudly on anything the sync could get wrong."""
+def _line(path: pathlib.Path, n: int, line: str, pattern: re.Pattern, module: dict,
+          seen: set[str]) -> re.Match:
+    """Match a task or a step line and check what both kinds share."""
+    m = pattern.match(line)
+    kind = "task" if pattern is TASK_LINE else "step"
+    if not m:
+        raise ValueError(f"{path.name}:{n}: malformed {kind} line")
+    if m["ms"] != module["id"]:
+        raise ValueError(f"{path.name}:{n}: {m['id']} belongs to another milestone")
+    if m["type"] not in TYPES:
+        raise ValueError(f"{path.name}:{n}: unknown type [{m['type']}]")
+    if m["id"] in seen:
+        raise ValueError(f"{path.name}:{n}: duplicate ID {m['id']}")
+    seen.add(m["id"])
+    return m
+
+
+def _group(path: pathlib.Path, tasks: list[dict], steps: list[dict]) -> None:
+    """Give every step its task, and every task what it takes from its steps."""
+    by_id = {step["id"]: step for step in steps}
+    for task in tasks:
+        for step_id in task["steps"]:
+            step = by_id.get(step_id)
+            if step is None:
+                raise ValueError(f"{path.name}: {task['id']} names {step_id}, "
+                                 "which is not a step of this file")
+            if "task" in step:
+                raise ValueError(f"{path.name}: {step_id} is in {step['task']} and in {task['id']}")
+            step["task"] = task["id"]
+        own = [by_id[step_id] for step_id in task["steps"]]
+        task["prio"] = min(step["prio"] for step in own)
+        task["start"] = min(step["start"] for step in own)
+        task["target"] = max(step["target"] for step in own)
+        task["hours"] = sum(step["hours"] for step in own)
+    loose = [step["id"] for step in steps if "task" not in step]
+    if loose:
+        raise ValueError(f"{path.name}: no task for {', '.join(loose)}")
+
+
+def parse_plan(plan_dir: pathlib.Path) -> tuple[list[dict], list[dict], list[dict]]:
+    """Read every plan file; fail loudly on anything the sync could get wrong.
+
+    Returns the modules, the tasks and the steps.
+    """
     milestones: list[dict] = []
-    issues: list[dict] = []
+    tasks: list[dict] = []
+    steps: list[dict] = []
     seen: set[str] = set()
     for path in sorted(plan_dir.glob("*.md")):
         lines = path.read_text(encoding="utf-8").splitlines()
@@ -220,6 +294,9 @@ def parse_plan(plan_dir: pathlib.Path) -> tuple[list[dict], list[dict]]:
             "goal": _goal(lines),
             **_header(path, lines),
         }
+        shared = {"milestone": ms, "phase": module["phase"], "track": module["track"],
+                  "file": path.name}
+        own_tasks: list[dict] = []
         own: list[dict] = []
         rows: list[tuple[int, str, str]] = []
         section = ""
@@ -234,7 +311,7 @@ def parse_plan(plan_dir: pathlib.Path) -> tuple[list[dict], list[dict]]:
                     raise ValueError(f"{path.name}:{n}: malformed schedule row")
                 rows.append((n, row["week"], row["ids"]))
                 continue
-            if section == "Issues" and line.startswith("### "):
+            if section == "Steps" and line.startswith("### "):
                 m = REPO_HEADING.match(line)
                 if not m or m["repo"] not in REPOS:
                     raise ValueError(f"{path.name}:{n}: unknown repository in '{line}'")
@@ -242,59 +319,73 @@ def parse_plan(plan_dir: pathlib.Path) -> tuple[list[dict], list[dict]]:
                 continue
             if not line.startswith("- ") or " -- Done when: " not in line:
                 continue
-            m = ISSUE_LINE.match(line)
-            if not m:
-                raise ValueError(f"{path.name}:{n}: malformed issue line")
+            if section == "Tasks":
+                m = _line(path, n, line, TASK_LINE, module, seen)
+                own_tasks.append({
+                    "id": m["id"], "repo": HOME, "type": m["type"], "title": m["title"],
+                    "done": m["done"], "steps": [part.strip() for part in m["steps"].split(",")],
+                    **shared,
+                })
+                continue
             if repo is None:
-                raise ValueError(f"{path.name}:{n}: {m['id']} is not under a repository heading")
-            if m["ms"] != ms:
-                raise ValueError(f"{path.name}:{n}: {m['id']} belongs to another milestone")
-            if m["type"] not in TYPES:
-                raise ValueError(f"{path.name}:{n}: unknown type [{m['type']}]")
+                raise ValueError(f"{path.name}:{n}: this step is not under a repository heading "
+                                 "of the Steps section")
+            m = _line(path, n, line, STEP_LINE, module, seen)
             if m["prio"] not in PRIORITIES:
                 raise ValueError(f"{path.name}:{n}: unknown priority [{m['prio']}]")
-            if m["id"] in seen:
-                raise ValueError(f"{path.name}:{n}: duplicate ID {m['id']}")
-            seen.add(m["id"])
+            if m["size"] not in SIZES:
+                raise ValueError(f"{path.name}:{n}: unknown size [{m['size']}]")
             own.append({
-                "id": m["id"],
-                "milestone": ms,
-                "repo": repo,
-                "type": m["type"],
-                "prio": m["prio"],
-                "phase": module["phase"],
-                "track": module["track"],
-                "title": m["title"],
-                "done": m["done"],
-                "file": path.name,
+                "id": m["id"], "repo": repo, "type": m["type"], "prio": m["prio"],
+                "size": m["size"], "hours": SIZES[m["size"]], "title": m["title"],
+                "done": m["done"], **shared,
             })
         if not own:
-            raise ValueError(f"{path.name}: no issues")
-        weeks = _weeks(path, rows, [issue["id"] for issue in own])
-        for issue in own:
-            issue["start"] = weeks[issue["id"]]
-            issue["target"] = _sunday(weeks[issue["id"]])
-        module["start"] = min(issue["start"] for issue in own)
-        module["target"] = max(issue["target"] for issue in own)
+            raise ValueError(f"{path.name}: no steps")
+        weeks = _weeks(path, rows, [step["id"] for step in own])
+        for step in own:
+            step["start"] = weeks[step["id"]]
+            step["target"] = _sunday(weeks[step["id"]])
+        _group(path, own_tasks, own)
+        module["start"] = min(step["start"] for step in own)
+        module["target"] = max(step["target"] for step in own)
+        module["hours"] = sum(step["hours"] for step in own)
         milestones.append(module)
-        issues.extend(own)
-    return milestones, issues
+        tasks.extend(own_tasks)
+        steps.extend(own)
+    return milestones, tasks, steps
 
 
-def issue_body(issue: dict) -> str:
+def _plan_link(item: dict) -> str:
+    return f"Plan: [docs/plan/{item['file']}]({PLAN_URL}{item['file']})\n\n"
+
+
+def step_body(step: dict) -> str:
     return (
-        f"**Done when:** {issue['done']}\n\n"
-        f"Plan: [docs/plan/{issue['file']}]({PLAN_URL}{issue['file']})\n\n"
-        f"<!-- plan-id: {issue['id']} -->\n"
+        f"**Done when:** {step['done']}\n\n"
+        f"**Size:** {step['size']}\n\n"
+        f"{_plan_link(step)}"
+        f"<!-- plan-id: {step['id']} -->\n"
     )
 
 
-def issue_labels(issue: dict) -> list[str]:
+def task_body(task: dict) -> str:
+    return (
+        f"**Done when:** {task['done']}\n\n"
+        "The steps of this task, in every repository, are its sub-issues. The task is closed "
+        "by hand, when every step is closed and the line above holds.\n\n"
+        f"{_plan_link(task)}"
+        f"<!-- plan-task: {task['id']} -->\n"
+    )
+
+
+def item_labels(item: dict) -> list[str]:
+    """The managed labels of a task or of a step."""
     return [
-        f"type:{issue['type']}",
-        f"area:{AREAS[issue['milestone']]}",
-        f"prio:{issue['prio']}",
-        f"phase:{issue['phase']}",
+        f"type:{item['type']}",
+        f"area:{AREAS[item['milestone']]}",
+        f"prio:{item['prio']}",
+        f"phase:{item['phase']}",
     ]
 
 
@@ -306,8 +397,9 @@ def epic_body(module: dict) -> str:
     return (
         f"**Goal:** {module['goal']}\n\n"
         f"**Depends on:** {', '.join(module['deps']) or 'nothing'}\n\n"
-        "The issues of this module, in every repository, are the sub-issues of this epic.\n\n"
-        f"Plan: [docs/plan/{module['file']}]({PLAN_URL}{module['file']})\n\n"
+        "The tasks of this module are the sub-issues of this epic, and every task has its "
+        "steps as sub-issues, in the repository that does the work.\n\n"
+        f"{_plan_link(module)}"
         f"<!-- plan-epic: {module['id']} -->\n"
     )
 
@@ -316,30 +408,55 @@ def epic_labels(module: dict) -> list[str]:
     return [f"area:{AREAS[module['id']]}", f"phase:{module['phase']}"]
 
 
+def specs(milestones: list[dict], tasks: list[dict], steps: list[dict]) -> dict[str, list[dict]]:
+    """What the issue of every epic, task and step must look like, per level."""
+    return {
+        "epic": [{"id": m["id"], "milestone": m["id"], "repo": HOME, "title": epic_title(m),
+                  "body": epic_body(m), "labels": epic_labels(m), "type": EPIC_TYPE}
+                 for m in milestones],
+        "task": [{"id": t["id"], "milestone": t["milestone"], "repo": t["repo"],
+                  "title": f"{t['id']} {t['title']}", "body": task_body(t),
+                  "labels": item_labels(t), "type": TASK_TYPE} for t in tasks],
+        "step": [{"id": s["id"], "milestone": s["milestone"], "repo": s["repo"],
+                  "title": f"{s['id']} {s['title']}", "body": step_body(s),
+                  "labels": item_labels(s), "type": STEP_TYPE} for s in steps],
+    }
+
+
+def families(tasks: list[dict], steps: list[dict]) -> dict[tuple[str, str], list[tuple[str, str]]]:
+    """(level, plan ID) of every parent -> its children, in the order of the plan."""
+    tree: dict[tuple[str, str], list[tuple[str, str]]] = {}
+    for task in tasks:
+        tree.setdefault(("epic", task["milestone"]), []).append(("task", task["id"]))
+    for task in tasks:
+        tree[("task", task["id"])] = [("step", step_id) for step_id in task["steps"]]
+    return tree
+
+
 def merged_labels(current: list[str], wanted: list[str]) -> list[str]:
     """Wanted managed labels plus any label someone added by hand."""
     manual = [name for name in current if not name.startswith(MANAGED_PREFIXES)]
     return manual + [name for name in wanted if name not in manual]
 
 
-def repos_in_use(issues: list[dict]) -> list[str]:
-    """Repositories that have at least one issue, in the order of REPOS."""
-    used = {issue["repo"] for issue in issues} | {HOME}
+def repos_in_use(steps: list[dict]) -> list[str]:
+    """Repositories that have at least one step, in the order of REPOS."""
+    used = {step["repo"] for step in steps} | {HOME}
     return [repo for repo in REPOS if repo in used]
 
 
-def milestones_of(repo: str, milestones: list[dict], issues: list[dict]) -> list[dict]:
-    """The milestones a repository needs: all of them at home, where the epics live."""
+def milestones_of(repo: str, milestones: list[dict], steps: list[dict]) -> list[dict]:
+    """The milestones a repository needs: all at home, where the epics and tasks live."""
     if repo == HOME:
         return list(milestones)
-    used = {issue["milestone"] for issue in issues if issue["repo"] == repo}
+    used = {step["milestone"] for step in steps if step["repo"] == repo}
     return [m for m in milestones if m["id"] in used]
 
 
-def wanted_labels(repo: str, milestones: list[dict], issues: list[dict]) -> dict[str, tuple[str, str]]:
+def wanted_labels(repo: str, milestones: list[dict], steps: list[dict]) -> dict[str, tuple[str, str]]:
     """Every label the repository must have: name -> (color, description)."""
     want = {f"type:{name}": spec for name, spec in TYPES.items()}
-    for m in milestones_of(repo, milestones, issues):
+    for m in milestones_of(repo, milestones, steps):
         want[f"area:{AREAS[m['id']]}"] = (AREA_COLOR, f"Milestone {m['title']}")
     for name, (color, _board, meaning) in PRIORITIES.items():
         want[f"prio:{name}"] = (color, meaning)
@@ -358,27 +475,86 @@ def board_fields() -> list[dict]:
             (f"Phase {name}", color, meaning) for name, (color, meaning) in PHASES.items()]},
         {"name": "Track", "type": "SINGLE_SELECT", "options": [
             (f"{key} {name}", color, meaning) for key, (name, color, meaning) in TRACKS.items()]},
+        {"name": "Estimate", "type": "NUMBER", "options": []},
         {"name": "Start", "type": "DATE", "options": []},
         {"name": "Target", "type": "DATE", "options": []},
     ]
 
 
-def board_values(item: dict, epic: bool = False) -> dict[str, str]:
-    """Field values of a module (its epic) or of an issue on the board."""
-    values = {
+def board_values(item: dict, kind: str) -> dict[str, str | int]:
+    """Field values of the card of a module (its epic), a task or a step.
+
+    Only a step carries hours, so a sum over any set of cards counts each hour once.
+    """
+    values: dict[str, str | int] = {
         "Phase": f"Phase {item['phase']}",
         "Track": f"{item['track']} {TRACKS[item['track']][0]}",
         "Start": item["start"],
         "Target": item["target"],
     }
-    if not epic:
+    if kind != "epic":
         values["Priority"] = item["prio"].upper()
+    if kind == "step":
+        values["Estimate"] = item["hours"]
     return values
 
 
 def board_guide(text: str) -> str:
     """The part of docs/BOARD.md that is published as the README of the board."""
     return text.split(GUIDE_END, 1)[0].strip() + "\n"
+
+
+def hours_text(hours: float) -> str:
+    """Hours as they are printed: 3 for 3.0, 1.5 for 1.5."""
+    return f"{hours:g}"
+
+
+def task_table(milestones: list[dict], tasks: list[dict], steps: list[dict]) -> str:
+    """Every module and its tasks, with their steps, hours and dates."""
+    rows = ["| Task | Steps | Hours | Start | Target |", "|---|---|---|---|---|"]
+    for module in sorted(milestones, key=lambda m: (m["track"], m["id"])):
+        count = sum(1 for step in steps if step["milestone"] == module["id"])
+        rows.append(f"| **{module['id']} {module['name']}** | {count} "
+                    f"| {hours_text(module['hours'])} | {module['start']} | {module['target']} |")
+        for task in tasks:
+            if task["milestone"] == module["id"]:
+                rows.append(f"| {task['id']} {task['title']} | {len(task['steps'])} "
+                            f"| {hours_text(task['hours'])} | {task['start']} | {task['target']} |")
+    return "\n".join(rows)
+
+
+def load_table(steps: list[dict]) -> str:
+    """The steps and the hours planned for every week, split by module."""
+    weeks: dict[str, dict[str, list[float]]] = {}
+    for step in steps:
+        weeks.setdefault(step["start"], {}).setdefault(step["milestone"], []).append(step["hours"])
+    order = list(AREAS)
+    rows = ["| Week of | Steps | Hours | By module |", "|---|---|---|---|"]
+    for monday in sorted(weeks):
+        modules = weeks[monday]
+        split = ", ".join(f"{ms} {hours_text(sum(modules[ms]))}"
+                          for ms in sorted(modules, key=order.index))
+        rows.append(f"| {monday} | {sum(len(hours) for hours in modules.values())} "
+                    f"| {hours_text(sum(sum(hours) for hours in modules.values()))} | {split} |")
+    rows.append(f"| **Total** | {len(steps)} "
+                f"| {hours_text(sum(step['hours'] for step in steps))} | |")
+    return "\n".join(rows)
+
+
+def fill(text: str, blocks: dict[str, str]) -> str:
+    """Replace what stands between the start and end comments of each named block."""
+    for name, body in blocks.items():
+        block = re.compile(rf"<!-- {name}:start -->\n.*?<!-- {name}:end -->", re.S)
+        if not block.search(text):
+            raise ValueError(f"no '{name}' block in the document")
+        text = block.sub(lambda _m, name=name, body=body:
+                         f"<!-- {name}:start -->\n{body}\n<!-- {name}:end -->", text, count=1)
+    return text
+
+
+def plan_doc(text: str, milestones: list[dict], tasks: list[dict], steps: list[dict]) -> str:
+    """docs/PLAN.md with its generated tables brought up to date."""
+    return fill(text, {"tasks": task_table(milestones, tasks, steps), "load": load_table(steps)})
 
 
 def gh(args: list[str], payload: dict | None = None, pace: float = 0.0,
@@ -419,10 +595,19 @@ def api_list(path: str) -> list[dict]:
     return [json.loads(line) for line in out.splitlines() if line.strip()]
 
 
-def sync_labels(milestones: list[dict], issues: list[dict], apply: bool, pace: float) -> None:
-    for repo in repos_in_use(issues):
+def missing_types() -> list[str]:
+    """The issue types the levels need that the account does not have."""
+    out = gh(["api", "graphql", "--input", "-"],
+             {"query": TYPES_QUERY, "variables": {"owner": OWNER, "name": HOME}}, repeatable=True)
+    nodes = json.loads(out)["data"]["repository"]["issueTypes"]["nodes"]
+    have = {node["name"] for node in nodes if node["isEnabled"]}
+    return [name for name in (EPIC_TYPE, TASK_TYPE, STEP_TYPE) if name not in have]
+
+
+def sync_labels(milestones: list[dict], steps: list[dict], apply: bool, pace: float) -> None:
+    for repo in repos_in_use(steps):
         have = {label["name"] for label in api_list(f"repos/{OWNER}/{repo}/labels?per_page=100")}
-        for name, (color, description) in wanted_labels(repo, milestones, issues).items():
+        for name, (color, description) in wanted_labels(repo, milestones, steps).items():
             if name in have:
                 continue
             print(f"label + {repo} {name}", flush=True)
@@ -431,19 +616,19 @@ def sync_labels(milestones: list[dict], issues: list[dict], apply: bool, pace: f
                    {"name": name, "color": color, "description": description}, pace)
 
 
-def sync_milestones(milestones: list[dict], issues: list[dict], apply: bool,
+def sync_milestones(milestones: list[dict], steps: list[dict], apply: bool,
                     pace: float) -> dict[tuple[str, str], int]:
     """Create each milestone in every repository that needs it, due on its last day.
 
     Milestones are matched by their ID prefix, so a renamed one is updated in place.
     """
     numbers: dict[tuple[str, str], int] = {}
-    for repo in repos_in_use(issues):
+    for repo in repos_in_use(steps):
         base = f"repos/{OWNER}/{repo}/milestones"
         have = {}
         for cur in api_list(f"{base}?state=all&per_page=100"):
             have[cur["title"].split(" - ", 1)[0]] = cur
-        for m in milestones_of(repo, milestones, issues):
+        for m in milestones_of(repo, milestones, steps):
             want = {
                 "title": m["title"],
                 "description": f"{m['goal']}\n\nPlan: {PLAN_URL}{m['file']}",
@@ -497,28 +682,23 @@ def wanted(cur: dict | None, title: str, body: str, labels: list[str], issue_typ
     return want
 
 
-def find_existing() -> tuple[dict[str, tuple[str, dict]], dict[str, dict]]:
-    """Issues that carry a plan ID, in any repository, and the epics at home."""
-    existing: dict[str, tuple[str, dict]] = {}
-    epics: dict[str, dict] = {}
+def find_existing() -> dict[str, dict[str, tuple[str, dict]]]:
+    """Level -> plan ID -> (repository, issue), for every issue that carries a marker."""
+    found: dict[str, dict[str, tuple[str, dict]]] = {kind: {} for kind in MARKERS}
     for repo in REPOS:
         for item in api_list(f"repos/{OWNER}/{repo}/issues?state=all&per_page=100"):
             if "pull_request" in item:
                 continue
             body = item.get("body") or ""
-            epic = EPIC_MARKER.search(body)
-            if epic and repo == HOME:
-                if epic["id"] in epics:
-                    print(f"warning: more than one epic for {epic['id']}", flush=True)
-                epics.setdefault(epic["id"], item)
-                continue
-            mark = MARKER.search(body)
-            if not mark:
-                continue
-            if mark["id"] in existing:
-                print(f"warning: plan ID {mark['id']} is on more than one issue", flush=True)
-            existing.setdefault(mark["id"], (repo, item))
-    return existing, epics
+            for kind, marker in MARKERS.items():
+                mark = marker.search(body)
+                if not mark:
+                    continue
+                if mark["id"] in found[kind]:
+                    print(f"warning: {kind} {mark['id']} is on more than one issue", flush=True)
+                found[kind].setdefault(mark["id"], (repo, item))
+                break
+    return found
 
 
 def transfer(number: int, source: str, target: str, pace: float) -> dict:
@@ -531,114 +711,87 @@ def transfer(number: int, source: str, target: str, pace: float) -> dict:
     return json.loads(gh(["api", f"repos/{OWNER}/{target}/issues/{moved['number']}"]))
 
 
-def sync_epics(milestones: list[dict], numbers: dict[tuple[str, str], int], epics: dict[str, dict],
-               only: set[str] | None, apply: bool, pace: float) -> dict[str, dict]:
-    """One epic per module in the home repository; returns module ID -> epic."""
-    base = f"repos/{OWNER}/{HOME}/issues"
-    created = updated = unchanged = 0
-    for module in milestones:
-        if only and module["id"] not in only:
-            continue
-        cur = epics.get(module["id"])
-        want = wanted(cur, epic_title(module), epic_body(module), epic_labels(module), EPIC_TYPE,
-                      numbers.get((HOME, module["id"])))
-        if cur is None:
-            created += 1
-            print(f"epic + {HOME} {want['title']}", flush=True)
-            if apply:
-                out = gh(["api", "--method", "POST", base, "--input", "-"], want, pace)
-                epics[module["id"]] = json.loads(out)
-        elif _differs(cur, want):
-            updated += 1
-            print(f"epic ~ {HOME}#{cur['number']} {want['title']}", flush=True)
-            if apply:
-                gh(["api", "--method", "PATCH", f"{base}/{cur['number']}", "--input", "-"],
-                   want, pace, repeatable=True)
-        else:
-            unchanged += 1
-    print(f"epics: {created} to create, {updated} to update, {unchanged} unchanged", flush=True)
-    return epics
-
-
-def sync_issues(issues: list[dict], numbers: dict[tuple[str, str], int],
+def sync_issues(kind: str, wanted_issues: list[dict], numbers: dict[tuple[str, str], int],
                 existing: dict[str, tuple[str, dict]], only: set[str] | None, apply: bool,
                 pace: float) -> dict[str, dict]:
-    """One issue per plan line, in its repository; returns plan ID -> issue."""
-    plan_ids = {issue["id"] for issue in issues}
+    """One issue per epic, task or step, in its repository; returns plan ID -> issue."""
+    plan_ids = {spec["id"] for spec in wanted_issues}
     for orphan in sorted(set(existing) - plan_ids):
         repo, item = existing[orphan]
         print(f"warning: {repo}#{item['number']} ({orphan}) is no longer in the plan", flush=True)
 
     records: dict[str, dict] = {}
     created = moved = updated = unchanged = 0
-    for issue in issues:
-        if only and issue["milestone"] not in only:
+    for spec in wanted_issues:
+        if only and spec["milestone"] not in only:
             continue
-        repo = issue["repo"]
+        repo = spec["repo"]
         base = f"repos/{OWNER}/{repo}/issues"
-        cur_repo, cur = existing.get(issue["id"], (repo, None))
+        cur_repo, cur = existing.get(spec["id"], (repo, None))
         if cur is not None and cur_repo != repo:
             moved += 1
-            print(f"issue > {cur_repo}#{cur['number']} to {repo}: {issue['id']} {issue['title']}",
-                  flush=True)
+            print(f"{kind} > {cur_repo}#{cur['number']} to {repo}: {spec['title']}", flush=True)
             if not apply:
                 continue
             cur = transfer(cur["number"], cur_repo, repo, pace)
-        want = wanted(cur, f"{issue['id']} {issue['title']}", issue_body(issue),
-                      issue_labels(issue), TASK_TYPE, numbers.get((repo, issue["milestone"])))
+        want = wanted(cur, spec["title"], spec["body"], spec["labels"], spec["type"],
+                      numbers.get((repo, spec["milestone"])))
         if cur is None:
             created += 1
-            print(f"issue + {repo} {want['title']}", flush=True)
+            print(f"{kind} + {repo} {want['title']}", flush=True)
             if apply:
                 out = gh(["api", "--method", "POST", base, "--input", "-"], want, pace)
-                records[issue["id"]] = json.loads(out)
+                records[spec["id"]] = json.loads(out)
             continue
-        records[issue["id"]] = cur
+        records[spec["id"]] = cur
         if _differs(cur, want):
             updated += 1
-            print(f"issue ~ {repo}#{cur['number']} {want['title']}", flush=True)
+            print(f"{kind} ~ {repo}#{cur['number']} {want['title']}", flush=True)
             if apply:
                 gh(["api", "--method", "PATCH", f"{base}/{cur['number']}", "--input", "-"],
                    want, pace, repeatable=True)
         else:
             unchanged += 1
-    print(f"issues: {created} to create, {moved} to move, {updated} to update, "
+    print(f"{kind}s: {created} to create, {moved} to move, {updated} to update, "
           f"{unchanged} unchanged", flush=True)
     return records
 
 
-def sync_parents(issues: list[dict], records: dict[str, dict], epics: dict[str, dict],
+def sync_parents(tasks: list[dict], steps: list[dict], records: dict[str, dict[str, dict]],
                  only: set[str] | None, apply: bool, pace: float) -> None:
-    """Make every issue a sub-issue of the epic of its module."""
+    """Make every task a sub-issue of its epic and every step a sub-issue of its task."""
     linked = 0
-    for ms, epic in epics.items():
-        if only and ms not in only:
+    for (kind, parent_id), children in families(tasks, steps).items():
+        if only and parent_id.split("-")[0] not in only:
             continue
-        path = f"repos/{OWNER}/{HOME}/issues/{epic['number']}/sub_issues"
-        have = {sub["id"] for sub in api_list(f"{path}?per_page=100")}
-        for issue in issues:
-            record = records.get(issue["id"])
-            if issue["milestone"] != ms or record is None or record["id"] in have:
+        parent = records[kind].get(parent_id)
+        have: set[int] = set()
+        path = ""
+        if parent is not None:
+            where = ISSUE_URL.search(parent["html_url"])
+            path = f"repos/{OWNER}/{where['repo']}/issues/{where['number']}/sub_issues"
+            have = {sub["id"] for sub in api_list(f"{path}?per_page=100")}
+        for child_kind, child_id in children:
+            child = records[child_kind].get(child_id)
+            if child is not None and child["id"] in have:
                 continue
             linked += 1
-            print(f"parent + {HOME}#{epic['number']} gets {issue['repo']}#{record['number']} "
-                  f"{issue['id']}", flush=True)
-            if apply:
+            print(f"parent + {parent_id} gets {child_id}", flush=True)
+            if apply and parent is not None and child is not None:
                 gh(["api", "--method", "POST", path, "--input", "-"],
-                   {"sub_issue_id": record["id"], "replace_parent": True}, pace)
+                   {"sub_issue_id": child["id"], "replace_parent": True}, pace)
     print(f"parents: {linked} to link", flush=True)
 
 
-def board_cards(milestones: list[dict], issues: list[dict], records: dict[str, dict],
-                epics: dict[str, dict]) -> dict[str, dict[str, str]]:
+def board_cards(milestones: list[dict], tasks: list[dict], steps: list[dict],
+                records: dict[str, dict[str, dict]]) -> dict[str, dict[str, str | int]]:
     """Issue URL -> the field values its card must carry."""
-    cards: dict[str, dict[str, str]] = {}
-    for module in milestones:
-        if module["id"] in epics:
-            cards[epics[module["id"]]["html_url"]] = board_values(module, epic=True)
-    for issue in issues:
-        if issue["id"] in records:
-            cards[records[issue["id"]]["html_url"]] = board_values(issue)
+    cards: dict[str, dict[str, str | int]] = {}
+    for kind, items in (("epic", milestones), ("task", tasks), ("step", steps)):
+        for item in items:
+            record = records[kind].get(item["id"])
+            if record is not None:
+                cards[record["html_url"]] = board_values(item, kind)
     return cards
 
 
@@ -650,36 +803,62 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--views", action="store_true", help="also keep the saved views of the board")
     parser.add_argument("--guide", action="store_true", help="also publish docs/BOARD.md on the board")
     parser.add_argument("--pace", type=float, default=3.0, help="seconds to wait after each write")
-    parser.add_argument("--check", action="store_true", help="only parse and validate the plan")
+    parser.add_argument("--check", action="store_true",
+                        help="only validate the plan and the tables of docs/PLAN.md")
+    parser.add_argument("--write", action="store_true",
+                        help="only refresh the tables of docs/PLAN.md")
     args = parser.parse_args(argv)
 
-    milestones, issues = parse_plan(PLAN_DIR)
+    milestones, tasks, steps = parse_plan(PLAN_DIR)
     per_repo = ", ".join(
-        f"{repo} {sum(1 for issue in issues if issue['repo'] == repo)}"
-        for repo in repos_in_use(issues)
+        f"{repo} {sum(1 for step in steps if step['repo'] == repo)}"
+        for repo in repos_in_use(steps)
     )
-    print(f"plan: {len(milestones)} milestones, {len(issues)} issues ({per_repo})", flush=True)
-    if args.check:
-        return 0
+    print(f"plan: {len(milestones)} milestones, {len(tasks)} tasks, {len(steps)} steps "
+          f"({per_repo}), {hours_text(sum(step['hours'] for step in steps))} hours", flush=True)
+    if args.check or args.write:
+        raw = PLAN_DOC.read_bytes().decode("utf-8")
+        text = raw.replace("\r\n", "\n")
+        fresh = plan_doc(text, milestones, tasks, steps)
+        if fresh == text:
+            return 0
+        if args.write:
+            PLAN_DOC.write_bytes((fresh.replace("\n", "\r\n") if "\r\n" in raw else fresh)
+                                 .encode("utf-8"))
+            print("docs/PLAN.md: tables refreshed")
+            return 0
+        print("docs/PLAN.md is behind the plan files: run python scripts/plan_sync.py --write",
+              file=sys.stderr)
+        return 1
     only = set(args.only.split(",")) if args.only else None
     if only and only - set(AREAS):
         parser.error(f"unknown milestone IDs: {', '.join(sorted(only - set(AREAS)))}")
     if (args.views or args.guide) and not args.project:
         parser.error("--views and --guide need --project")
+    absent = missing_types()
+    if absent:
+        note = f"issue type missing on the account: {', '.join(absent)} (add at {ISSUE_TYPES_URL})"
+        if args.apply:
+            print(note, file=sys.stderr)
+            return 1
+        print(f"warning: {note}", flush=True)
 
-    sync_labels(milestones, issues, args.apply, args.pace)
-    numbers = sync_milestones(milestones, issues, args.apply, args.pace)
-    existing, epics = find_existing()
-    epics = sync_epics(milestones, numbers, epics, only, args.apply, args.pace)
-    records = sync_issues(issues, numbers, existing, only, args.apply, args.pace)
-    sync_parents(issues, records, epics, only, args.apply, args.pace)
+    sync_labels(milestones, steps, args.apply, args.pace)
+    numbers = sync_milestones(milestones, steps, args.apply, args.pace)
+    existing = find_existing()
+    records = {
+        kind: sync_issues(kind, wanted_issues, numbers, existing[kind], only, args.apply, args.pace)
+        for kind, wanted_issues in specs(milestones, tasks, steps).items()
+    }
+    sync_parents(tasks, steps, records, only, args.apply, args.pace)
     if args.project:
         import plan_board
 
         board = plan_board.Board(gh, OWNER, args.project, args.apply, args.pace)
-        board.sync_items(list(board_cards(milestones, issues, records, epics)))
+        cards = board_cards(milestones, tasks, steps, records)
+        board.sync_items(list(cards))
         board.sync_fields(board_fields())
-        board.sync_values(board_cards(milestones, issues, records, epics))
+        board.sync_values(cards)
         if args.views:
             board.sync_views()
         if args.guide:
