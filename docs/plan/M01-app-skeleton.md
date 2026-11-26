@@ -75,7 +75,7 @@ last week. Dates change here first, and the sync script moves the board.
 
 | Week of | Steps |
 |---|---|
-| 2026-12-14 | M01-01, M01-02, M01-03, M01-04, M01-05, M01-06, M01-07, M01-08, M01-09, M01-10, M01-11, M01-12, M01-13, M01-14, M01-15 |
+| 2027-01-18 | M01-01, M01-02, M01-03, M01-04, M01-05, M01-06, M01-07, M01-08, M01-09, M01-10, M01-11, M01-12, M01-13, M01-14, M01-15 |
 
 ## Measures
 

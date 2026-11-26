@@ -223,65 +223,65 @@ a week holds more than 15 hours or when the tables are behind.
 <!-- tasks:start -->
 | Task | Steps | Hours | Start | Target |
 |---|---|---|---|---|
-| **P0 Foundation** | 25 | 20.5 | 2026-11-30 | 2026-12-13 |
-| P0-A Repository rules | 7 | 4 | 2026-11-30 | 2026-12-06 |
-| P0-B Project management | 2 | 1 | 2026-11-30 | 2026-12-06 |
-| P0-C Founding decisions and threat model | 7 | 6 | 2026-11-30 | 2026-12-06 |
-| P0-D CI security gates | 6 | 7 | 2026-11-30 | 2026-12-13 |
-| P0-E Developer environment and demo data | 3 | 2.5 | 2026-12-07 | 2026-12-13 |
-| **P1 Server runtime** | 21 | 26.5 | 2026-12-07 | 2027-01-10 |
-| P1-A Hardened host | 6 | 9 | 2026-12-07 | 2026-12-13 |
-| P1-B Public endpoint | 4 | 3.5 | 2026-12-14 | 2027-01-03 |
-| P1-C Stack and secrets | 3 | 3 | 2026-12-14 | 2026-12-27 |
-| P1-D Backups and restore | 3 | 4.5 | 2026-12-07 | 2027-01-03 |
-| P1-E Observability and runbooks | 5 | 6.5 | 2026-12-21 | 2027-01-10 |
-| **P2 Secure delivery** | 17 | 20 | 2027-01-04 | 2027-01-31 |
-| P2-A Trusted images | 5 | 4.5 | 2027-01-04 | 2027-01-17 |
-| P2-B Releases | 4 | 5 | 2027-01-11 | 2027-01-24 |
-| P2-C Pull-based deploys | 5 | 8 | 2027-01-11 | 2027-01-31 |
-| P2-D DAST and performance budgets | 3 | 2.5 | 2027-01-25 | 2027-01-31 |
-| **M01 App skeleton** | 15 | 11.5 | 2026-12-14 | 2026-12-20 |
-| M01-A Architecture decisions | 3 | 1.5 | 2026-12-14 | 2026-12-20 |
-| M01-B API skeleton | 3 | 2.5 | 2026-12-14 | 2026-12-20 |
-| M01-C Web app shell | 5 | 4 | 2026-12-14 | 2026-12-20 |
-| M01-D Contract between the repositories | 4 | 3.5 | 2026-12-14 | 2026-12-20 |
-| **M02 Accounts and sign-in** | 17 | 19 | 2026-12-21 | 2027-01-03 |
-| M02-A Enrollment | 4 | 5.5 | 2026-12-21 | 2026-12-27 |
-| M02-B Sign-in and sessions | 4 | 5.5 | 2026-12-21 | 2026-12-27 |
-| M02-C Step-up, recovery and security log | 4 | 3.5 | 2026-12-28 | 2027-01-03 |
-| M02-D Abuse protection | 3 | 2.5 | 2026-12-28 | 2027-01-03 |
-| M02-E Sign-in proven end to end | 2 | 2 | 2026-12-28 | 2027-01-03 |
-| **M03 Workspaces** | 14 | 16.5 | 2027-01-04 | 2027-01-17 |
-| M03-A Isolation between workspaces | 4 | 7 | 2027-01-04 | 2027-01-10 |
-| M03-B Workspaces | 3 | 2.5 | 2027-01-04 | 2027-01-10 |
-| M03-C Focus mode | 2 | 2 | 2027-01-04 | 2027-01-10 |
-| M03-D Moves, export and deletion | 5 | 5 | 2027-01-11 | 2027-01-17 |
-| **M04 Tasks** | 13 | 11.5 | 2027-01-11 | 2027-01-24 |
-| M04-A Tasks and lists | 4 | 3.5 | 2027-01-11 | 2027-01-24 |
-| M04-B Today | 3 | 2.5 | 2027-01-18 | 2027-01-24 |
-| M04-C Capture | 2 | 2 | 2027-01-18 | 2027-01-24 |
-| M04-D Follow-ups and recurrence | 2 | 1.5 | 2027-01-18 | 2027-01-24 |
-| M04-E Bulk and keyboard actions | 2 | 2 | 2027-01-18 | 2027-01-24 |
-| **M05 Notes and search** | 9 | 9.5 | 2027-01-25 | 2027-02-07 |
-| M05-A Notes | 3 | 3 | 2027-01-25 | 2027-01-31 |
-| M05-B Links between notes and tasks | 2 | 1 | 2027-01-25 | 2027-01-31 |
-| M05-C Search | 4 | 5.5 | 2027-02-01 | 2027-02-07 |
-| **M06 Calendars** | 22 | 32 | 2027-01-18 | 2027-02-21 |
-| M06-A Calendar access decided | 2 | 3.5 | 2027-01-18 | 2027-02-07 |
-| M06-B Background worker | 3 | 4 | 2027-02-01 | 2027-02-07 |
-| M06-C Connected accounts | 7 | 13 | 2027-02-01 | 2027-02-14 |
-| M06-D Calendar sync | 4 | 5.5 | 2027-02-08 | 2027-02-21 |
-| M06-E Merged agenda | 4 | 5 | 2027-02-15 | 2027-02-21 |
-| M06-F Untrusted event content | 2 | 1 | 2027-02-08 | 2027-02-21 |
-| **M07 Reminders** | 12 | 14.5 | 2027-02-15 | 2027-02-28 |
-| M07-A Push to a device | 3 | 4.5 | 2027-02-15 | 2027-02-21 |
-| M07-B Reminders on time | 3 | 5 | 2027-02-15 | 2027-02-28 |
-| M07-C Digest, actions and privacy | 3 | 2.5 | 2027-02-22 | 2027-02-28 |
-| M07-D Delivery proven and watched | 3 | 2.5 | 2027-02-22 | 2027-02-28 |
-| **M08 Meetings** | 11 | 8 | 2027-02-22 | 2027-02-28 |
-| M08-A Notes on a meeting | 5 | 4 | 2027-02-22 | 2027-02-28 |
-| M08-B Decisions and action items | 3 | 2.5 | 2027-02-22 | 2027-02-28 |
-| M08-C Series, templates and search | 3 | 1.5 | 2027-02-22 | 2027-02-28 |
+| **P0 Foundation** | 25 | 20.5 | 2027-01-04 | 2027-01-17 |
+| P0-A Repository rules | 7 | 4 | 2027-01-04 | 2027-01-10 |
+| P0-B Project management | 2 | 1 | 2027-01-04 | 2027-01-10 |
+| P0-C Founding decisions and threat model | 7 | 6 | 2027-01-04 | 2027-01-10 |
+| P0-D CI security gates | 6 | 7 | 2027-01-04 | 2027-01-17 |
+| P0-E Developer environment and demo data | 3 | 2.5 | 2027-01-11 | 2027-01-17 |
+| **P1 Server runtime** | 21 | 26.5 | 2027-01-11 | 2027-02-14 |
+| P1-A Hardened host | 6 | 9 | 2027-01-11 | 2027-01-17 |
+| P1-B Public endpoint | 4 | 3.5 | 2027-01-18 | 2027-02-07 |
+| P1-C Stack and secrets | 3 | 3 | 2027-01-18 | 2027-01-31 |
+| P1-D Backups and restore | 3 | 4.5 | 2027-01-11 | 2027-02-07 |
+| P1-E Observability and runbooks | 5 | 6.5 | 2027-01-25 | 2027-02-14 |
+| **P2 Secure delivery** | 17 | 20 | 2027-02-08 | 2027-03-07 |
+| P2-A Trusted images | 5 | 4.5 | 2027-02-08 | 2027-02-21 |
+| P2-B Releases | 4 | 5 | 2027-02-15 | 2027-02-28 |
+| P2-C Pull-based deploys | 5 | 8 | 2027-02-15 | 2027-03-07 |
+| P2-D DAST and performance budgets | 3 | 2.5 | 2027-03-01 | 2027-03-07 |
+| **M01 App skeleton** | 15 | 11.5 | 2027-01-18 | 2027-01-24 |
+| M01-A Architecture decisions | 3 | 1.5 | 2027-01-18 | 2027-01-24 |
+| M01-B API skeleton | 3 | 2.5 | 2027-01-18 | 2027-01-24 |
+| M01-C Web app shell | 5 | 4 | 2027-01-18 | 2027-01-24 |
+| M01-D Contract between the repositories | 4 | 3.5 | 2027-01-18 | 2027-01-24 |
+| **M02 Accounts and sign-in** | 17 | 19 | 2027-01-25 | 2027-02-07 |
+| M02-A Enrollment | 4 | 5.5 | 2027-01-25 | 2027-01-31 |
+| M02-B Sign-in and sessions | 4 | 5.5 | 2027-01-25 | 2027-01-31 |
+| M02-C Step-up, recovery and security log | 4 | 3.5 | 2027-02-01 | 2027-02-07 |
+| M02-D Abuse protection | 3 | 2.5 | 2027-02-01 | 2027-02-07 |
+| M02-E Sign-in proven end to end | 2 | 2 | 2027-02-01 | 2027-02-07 |
+| **M03 Workspaces** | 14 | 16.5 | 2027-02-08 | 2027-02-21 |
+| M03-A Isolation between workspaces | 4 | 7 | 2027-02-08 | 2027-02-14 |
+| M03-B Workspaces | 3 | 2.5 | 2027-02-08 | 2027-02-14 |
+| M03-C Focus mode | 2 | 2 | 2027-02-08 | 2027-02-14 |
+| M03-D Moves, export and deletion | 5 | 5 | 2027-02-15 | 2027-02-21 |
+| **M04 Tasks** | 13 | 11.5 | 2027-02-15 | 2027-02-28 |
+| M04-A Tasks and lists | 4 | 3.5 | 2027-02-15 | 2027-02-28 |
+| M04-B Today | 3 | 2.5 | 2027-02-22 | 2027-02-28 |
+| M04-C Capture | 2 | 2 | 2027-02-22 | 2027-02-28 |
+| M04-D Follow-ups and recurrence | 2 | 1.5 | 2027-02-22 | 2027-02-28 |
+| M04-E Bulk and keyboard actions | 2 | 2 | 2027-02-22 | 2027-02-28 |
+| **M05 Notes and search** | 9 | 9.5 | 2027-03-01 | 2027-03-14 |
+| M05-A Notes | 3 | 3 | 2027-03-01 | 2027-03-07 |
+| M05-B Links between notes and tasks | 2 | 1 | 2027-03-01 | 2027-03-07 |
+| M05-C Search | 4 | 5.5 | 2027-03-08 | 2027-03-14 |
+| **M06 Calendars** | 22 | 32 | 2027-02-22 | 2027-03-28 |
+| M06-A Calendar access decided | 2 | 3.5 | 2027-02-22 | 2027-03-14 |
+| M06-B Background worker | 3 | 4 | 2027-03-08 | 2027-03-14 |
+| M06-C Connected accounts | 7 | 13 | 2027-03-08 | 2027-03-21 |
+| M06-D Calendar sync | 4 | 5.5 | 2027-03-15 | 2027-03-28 |
+| M06-E Merged agenda | 4 | 5 | 2027-03-22 | 2027-03-28 |
+| M06-F Untrusted event content | 2 | 1 | 2027-03-15 | 2027-03-28 |
+| **M07 Reminders** | 12 | 14.5 | 2027-03-22 | 2027-04-04 |
+| M07-A Push to a device | 3 | 4.5 | 2027-03-22 | 2027-03-28 |
+| M07-B Reminders on time | 3 | 5 | 2027-03-22 | 2027-04-04 |
+| M07-C Digest, actions and privacy | 3 | 2.5 | 2027-03-29 | 2027-04-04 |
+| M07-D Delivery proven and watched | 3 | 2.5 | 2027-03-29 | 2027-04-04 |
+| **M08 Meetings** | 11 | 8 | 2027-03-29 | 2027-04-04 |
+| M08-A Notes on a meeting | 5 | 4 | 2027-03-29 | 2027-04-04 |
+| M08-B Decisions and action items | 3 | 2.5 | 2027-03-29 | 2027-04-04 |
+| M08-C Series, templates and search | 3 | 1.5 | 2027-03-29 | 2027-04-04 |
 <!-- tasks:end -->
 
 Hours planned per week:
@@ -289,19 +289,19 @@ Hours planned per week:
 <!-- load:start -->
 | Week of | Steps | Hours | By module |
 |---|---|---|---|
-| 2026-11-30 | 18 | 15 | P0 15 |
-| 2026-12-07 | 14 | 15 | P0 5.5, P1 9.5 |
-| 2026-12-14 | 18 | 14.5 | P1 3, M01 11.5 |
-| 2026-12-21 | 12 | 15 | P1 4, M02 11 |
-| 2026-12-28 | 15 | 15 | P1 7, M02 8 |
-| 2027-01-04 | 11 | 15 | P1 3, P2 0.5, M03 11.5 |
-| 2027-01-11 | 16 | 14.5 | P2 6.5, M03 5, M04 3 |
-| 2027-01-18 | 12 | 14.5 | P2 3, M04 8.5, M06 3 |
-| 2027-01-25 | 12 | 14 | P2 10, M05 4 |
-| 2027-02-01 | 9 | 13 | M05 5.5, M06 7.5 |
-| 2027-02-08 | 10 | 15 | M06 15 |
-| 2027-02-15 | 11 | 15 | M06 6.5, M07 8.5 |
-| 2027-02-22 | 18 | 14 | M07 6, M08 8 |
+| 2027-01-04 | 18 | 15 | P0 15 |
+| 2027-01-11 | 14 | 15 | P0 5.5, P1 9.5 |
+| 2027-01-18 | 18 | 14.5 | P1 3, M01 11.5 |
+| 2027-01-25 | 12 | 15 | P1 4, M02 11 |
+| 2027-02-01 | 15 | 15 | P1 7, M02 8 |
+| 2027-02-08 | 11 | 15 | P1 3, P2 0.5, M03 11.5 |
+| 2027-02-15 | 16 | 14.5 | P2 6.5, M03 5, M04 3 |
+| 2027-02-22 | 12 | 14.5 | P2 3, M04 8.5, M06 3 |
+| 2027-03-01 | 12 | 14 | P2 10, M05 4 |
+| 2027-03-08 | 9 | 13 | M05 5.5, M06 7.5 |
+| 2027-03-15 | 10 | 15 | M06 15 |
+| 2027-03-22 | 11 | 15 | M06 6.5, M07 8.5 |
+| 2027-03-29 | 18 | 14 | M07 6, M08 8 |
 | **Total** | 176 | 189.5 | |
 <!-- load:end -->
 
