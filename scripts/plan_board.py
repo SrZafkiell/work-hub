@@ -6,8 +6,8 @@ about the plan: plan_sync.py hands it the cards (issue URL -> field values) and 
 field definitions.
 
 The API creates a view and sets its name, layout, filter and visible fields. Grouping,
-sorting, slicing, and the date fields, markers and zoom of a roadmap can only be set in
-the browser; VIEWS records them, docs/BOARD.md lists them, and
+sorting, slicing, field sums, and the date fields, markers and zoom of a roadmap can only
+be set in the browser; VIEWS records them, docs/BOARD.md lists them, and
 
     python scripts/plan_board.py <project number>
 
@@ -31,9 +31,9 @@ VIEWS: tuple[dict, ...] = (
      "fields": ("Title", "Sub-issues progress", "Status", "Phase", "Track", "Start", "Target"),
      "sort": ("Start", "ASC")},
     {"name": "Milestones", "layout": "TABLE_LAYOUT", "filter": "type:Task -label:tech-debt",
-     "fields": ("Title", "Status", "Priority", "Repository", "Start", "Target", "Labels"),
+     "fields": ("Title", "Sub-issues progress", "Status", "Priority", "Start", "Target", "Labels"),
      "group": "Milestone", "sort": ("Target", "ASC")},
-    {"name": "By repository", "layout": "ROADMAP_LAYOUT", "filter": "type:Task",
+    {"name": "By repository", "layout": "ROADMAP_LAYOUT", "filter": "type:Step",
      "group": "Repository", "sort": ("Start", "ASC"),
      "by_hand": "dates Start and Target, markers Milestone, zoom Month"},
     {"name": "This week", "layout": "BOARD_LAYOUT",
@@ -60,6 +60,9 @@ VIEWS: tuple[dict, ...] = (
      "fields": ("Title", "Assignees", "Status", "Priority", "Phase", "Track", "Start", "Target",
                 "Milestone", "Repository", "Labels"),
      "group": "Phase", "sort": ("Start", "ASC"), "by_hand": "slice by Repository"},
+    {"name": "Load", "layout": "TABLE_LAYOUT", "filter": "type:Step",
+     "fields": ("Title", "Estimate", "Status", "Priority", "Parent issue", "Repository"),
+     "group": "Start", "sort": ("Target", "ASC"), "by_hand": "sum of Estimate"},
 )
 
 PROJECT = """
@@ -93,6 +96,7 @@ query($project: ID!, $after: String) {
       fieldValues(first: 30) { nodes {
         ... on ProjectV2ItemFieldSingleSelectValue { name field { ... on ProjectV2FieldCommon { name } } }
         ... on ProjectV2ItemFieldDateValue { date field { ... on ProjectV2FieldCommon { name } } }
+        ... on ProjectV2ItemFieldNumberValue { number field { ... on ProjectV2FieldCommon { name } } }
       } }
     }
   } } }
@@ -125,8 +129,16 @@ mutation($input: UpdateProjectV2Input!) {
 """
 
 
-def changed_values(cards: dict[str, dict[str, str]],
-                   items: dict[str, dict]) -> list[tuple[str, str, str]]:
+def stored_value(node: dict) -> str | float | None:
+    """What a field value node holds: an option name, a date or a number."""
+    for key in ("name", "date", "number"):
+        if node.get(key) is not None:
+            return node[key]
+    return None
+
+
+def changed_values(cards: dict[str, dict],
+                   items: dict[str, dict]) -> list[tuple[str, str, str | int]]:
     """(item ID, field, value) for every wanted value a card on the board does not have."""
     changes = []
     for url, want in cards.items():
@@ -140,13 +152,15 @@ def changed_values(cards: dict[str, dict[str, str]],
 
 
 def value_mutation(project_id: str, fields: dict[str, dict],
-                   changes: list[tuple[str, str, str]]) -> str:
+                   changes: list[tuple[str, str, str | int]]) -> str:
     """One GraphQL document that sets every value in `changes`."""
     parts = []
     for n, (item, name, value) in enumerate(changes):
         field = fields[name]
         if field["dataType"] == "DATE":
             literal = f"{{date: {json.dumps(value)}}}"
+        elif field["dataType"] == "NUMBER":
+            literal = f"{{number: {json.dumps(value)}}}"
         else:
             literal = f"{{singleSelectOptionId: {json.dumps(field['options'][value]['id'])}}}"
         parts.append(
@@ -219,7 +233,7 @@ class Board:
         }
 
     def items(self, project_id: str) -> dict[str, dict]:
-        """Issue or pull request URL -> the card and its single-select and date values."""
+        """Issue or pull request URL -> the card and its single-select, date and number values."""
         items: dict[str, dict] = {}
         after = None
         while True:
@@ -231,7 +245,7 @@ class Board:
                 values = {}
                 for value in node["fieldValues"]["nodes"]:
                     if value:
-                        values[value["field"]["name"]] = value.get("name") or value.get("date")
+                        values[value["field"]["name"]] = stored_value(value)
                 items[url] = {"id": node["id"], "values": values}
             if not page["pageInfo"]["hasNextPage"]:
                 return items
@@ -278,7 +292,7 @@ class Board:
                                                          "singleSelectOptions": keep + new}},
                                  write=True)
 
-    def sync_values(self, cards: dict[str, dict[str, str]]) -> None:
+    def sync_values(self, cards: dict[str, dict]) -> None:
         project = self.project()
         changes = changed_values(cards, self.items(project["id"]))
         touched = len({item for item, _, _ in changes})

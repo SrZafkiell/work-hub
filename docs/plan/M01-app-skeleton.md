@@ -34,41 +34,48 @@ model, so every later module only adds features.
 - Errors use one format (problem details, RFC 9457) with a request ID that matches the
   logs.
 
-## Issues
+## Tasks
+
+- M01-A [adr] Architecture decisions -- Done when: the three decisions the code depends on are accepted: one origin for the web app and the API, sync-ready data conventions, and a versioned contract between the repositories. -- Steps: M01-01, M01-02, M01-12
+- M01-B [feature] API skeleton -- Done when: the API starts, answers its health endpoints with problem-details errors and request IDs, and every pull request runs its lint, type and test gates against a real PostgreSQL. -- Steps: M01-03, M01-06, M01-10
+- M01-C [feature] Web app shell -- Done when: the empty app installs on a phone and on a desktop, passes the accessibility and installability checks, and every pull request runs its lint, type and test gates. -- Steps: M01-04, M01-07, M01-15, M01-08, M01-09
+- M01-D [ci] Contract between the repositories -- Done when: a change of the API reaches the web app as a versioned contract and a generated client, a breaking change fails CI, a client that is too old is told so, and one end-to-end test drives a web image against an API image. -- Steps: M01-05, M01-11, M01-13, M01-14
+
+## Steps
 
 ### work-hub
 
-- M01-01 [adr p1] Web app and API architecture -- Done when: accepted: a single-page app and a JSON API on one origin, the OpenAPI contract, and where state lives.
-- M01-02 [adr p1] Sync-ready data conventions -- Done when: accepted: UUIDv7 IDs, version counters, tombstones and idempotency keys, with their cost today and what they enable later.
-- M01-12 [adr p1] Contract versioning between repositories -- Done when: accepted: how the contract is versioned and published, what counts as a breaking change, how long the API serves an older version, and how a client learns that it is too old.
-- M01-14 [test p2] End-to-end harness -- Done when: one Playwright test drives a web image against an API image and a seeded database in CI, runs on every candidate pair of images, and keeps traces on failure.
+- M01-01 [adr p1 S] Web app and API architecture -- Done when: accepted: a single-page app and a JSON API on one origin, the OpenAPI contract, and where state lives.
+- M01-02 [adr p1 S] Sync-ready data conventions -- Done when: accepted: UUIDv7 IDs, version counters, tombstones and idempotency keys, with their cost today and what they enable later.
+- M01-12 [adr p1 S] Contract versioning between repositories -- Done when: accepted: how the contract is versioned and published, what counts as a breaking change, how long the API serves an older version, and how a client learns that it is too old.
+- M01-14 [test p2 M] End-to-end harness -- Done when: one Playwright test drives a web image against an API image and a seeded database in CI, runs on every candidate pair of images, and keeps traces on failure.
 
 ### work-hub-backend
 
-- M01-03 [feature p1] API skeleton -- Done when: an app factory, typed settings, database sessions, migrations, problem-details errors and request IDs are in place, and the health endpoints answer.
-- M01-05 [ci p1] API contract check -- Done when: the OpenAPI document is committed, CI fails on drift between the code and the document and on a breaking change against the last released contract, and every release publishes the contract as a versioned artifact.
-- M01-06 [test p1] Backend test harness -- Done when: pytest runs against a real PostgreSQL with the migrations applied, factories build demo data, and coverage can only go up.
-- M01-10 [ci p2] Lint, format and type gates -- Done when: Ruff and a type checker run on every pull request.
-- M01-13 [feature p2] Version handshake -- Done when: an open endpoint reports the contract versions the API supports, and a request from a client that is too old gets a clear error instead of a failure deep in a call.
+- M01-03 [feature p1 M] API skeleton -- Done when: an app factory, typed settings, database sessions, migrations, problem-details errors and request IDs are in place, and the health endpoints answer.
+- M01-05 [ci p1 M] API contract check -- Done when: the OpenAPI document is committed, CI fails on drift between the code and the document and on a breaking change against the last released contract, and every release publishes the contract as a versioned artifact.
+- M01-06 [test p1 M] Backend test harness -- Done when: pytest runs against a real PostgreSQL with the migrations applied, factories build demo data, and coverage can only go up.
+- M01-10 [ci p2 S] Lint, format and type gates -- Done when: Ruff and a type checker run on every pull request.
+- M01-13 [feature p2 S] Version handshake -- Done when: an open endpoint reports the contract versions the API supports, and a request from a client that is too old gets a clear error instead of a failure deep in a call.
 
 ### work-hub-frontend
 
-- M01-04 [feature p1] Web app shell -- Done when: routing, a layout that works on a phone and on a desktop, light and dark themes from design tokens, empty and error states, and a signed-out page exist.
-- M01-07 [test p2] Web test harness -- Done when: unit and component tests run with Vitest against the pinned contract, and coverage can only go up.
-- M01-08 [feature p2] Installable web app -- Done when: a manifest, icons and a service worker that caches only the app shell pass an installability check in CI, an update prompt appears when a new version is deployed, and the app asks the user to update when the API no longer supports its contract.
-- M01-09 [feature p2] Accessibility and keyboard baseline -- Done when: automated accessibility checks run in CI with no serious finding, focus is managed on navigation, and a shortcut registry exists for later modules.
-- M01-11 [ci p1] Generated API client -- Done when: the web app pins a contract version, CI generates the TypeScript client from it and fails on a hand-edited client, and a newer contract arrives as an automated pull request.
-- M01-15 [ci p2] Lint and type gates -- Done when: ESLint and TypeScript strict mode run on every pull request.
+- M01-04 [feature p1 M] Web app shell -- Done when: routing, a layout that works on a phone and on a desktop, light and dark themes from design tokens, empty and error states, and a signed-out page exist.
+- M01-07 [test p2 S] Web test harness -- Done when: unit and component tests run with Vitest against the pinned contract, and coverage can only go up.
+- M01-08 [feature p2 M] Installable web app -- Done when: a manifest, icons and a service worker that caches only the app shell pass an installability check in CI, an update prompt appears when a new version is deployed, and the app asks the user to update when the API no longer supports its contract.
+- M01-09 [feature p2 M] Accessibility and keyboard baseline -- Done when: automated accessibility checks run in CI with no serious finding, focus is managed on navigation, and a shortcut registry exists for later modules.
+- M01-11 [ci p1 M] Generated API client -- Done when: the web app pins a contract version, CI generates the TypeScript client from it and fails on a hand-edited client, and a newer contract arrives as an automated pull request.
+- M01-15 [ci p2 S] Lint and type gates -- Done when: ESLint and TypeScript strict mode run on every pull request.
 
 ## Schedule
 
-Planned weeks. Each issue starts on the Monday shown and is due that Sunday; the module's
-epic and its milestone end with the last week. Dates change here first, and the sync
-script moves the board.
+Planned weeks. Each step starts on the Monday shown and is due that Sunday; a task runs
+from its first step to its last, and the module's epic and its milestone end with the
+last week. Dates change here first, and the sync script moves the board.
 
-| Week of | Issues |
+| Week of | Steps |
 |---|---|
-| 2026-12-07 | M01-01, M01-02, M01-03, M01-04, M01-05, M01-06, M01-07, M01-08, M01-09, M01-10, M01-11, M01-12, M01-13, M01-14, M01-15 |
+| 2026-12-14 | M01-01, M01-02, M01-03, M01-04, M01-05, M01-06, M01-07, M01-08, M01-09, M01-10, M01-11, M01-12, M01-13, M01-14, M01-15 |
 
 ## Measures
 
