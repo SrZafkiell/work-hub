@@ -58,7 +58,7 @@ last week. Dates change here first, and the sync script moves the board.
 
 | Week of | Steps |
 |---|---|
-| 2027-02-01 | M08-01, M08-02, M08-03, M08-04, M08-05, M08-06, M08-07, M08-08, M08-09, M08-10, M08-11 |
+| 2027-02-22 | M08-01, M08-02, M08-03, M08-04, M08-05, M08-06, M08-07, M08-08, M08-09, M08-10, M08-11 |
 
 ## Measures
 
